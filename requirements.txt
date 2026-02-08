@@ -1,3 +1,5 @@
 streamlit
 pandas
 bioservices
+matplotlib
+networkx
