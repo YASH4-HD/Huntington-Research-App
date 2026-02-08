@@ -42,13 +42,13 @@ def get_kegg_genes(pathway_id):
 # Load the data
 df = get_kegg_genes("hsa05016")
 
-# --- SIDEBAR RESEARCHER PROFILE ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=100) # DNA Icon
-st.sidebar.title("Researcher: Yashwant Nama")
-st.sidebar.info("""
-**Target:** PhD in Neurogenetics
-**Focus:** Huntington's Disease (HD)
-""")
+# --- NEW LOGIC: ANNOTATE GENE ROLES ---
+CORE_HD_GENES = ["HTT", "BDNF", "CASP3", "CREB1", "TP53", "SOD1", "PPARGC1A"]
+
+df["Role"] = df["Symbol"].apply(
+    lambda x: "⭐ Core HD Gene" if x in CORE_HD_GENES else "🧬 Pathway Component"
+)
+
 
 # Download Button for CV
 try:
