@@ -24,9 +24,32 @@ def fetch_real_hd_data():
 df = fetch_real_hd_data()
 
 # --- Sidebar ---
+# --- SIDEBAR RESEARCHER PROFILE ---
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/5072/5072852.png", width=100)
+st.sidebar.title("Researcher: Yashwant Nama")
+st.sidebar.info("""
+**Target:** PhD in Neurogenetics
+**Focus:** Huntington's Disease (HD)
+""")
+
+# Download Button for your CV
+try:
+    with open("CV_Yashwant_Nama_PhD_Application.pdf", "rb") as file:
+        st.sidebar.download_button(
+            label="📄 Download My CV",
+            data=file,
+            file_name="Yashwant_Nama_CV.pdf",
+            mime="application/pdf"
+        )
+except FileNotFoundError:
+    st.sidebar.error("Upload CV to GitHub to enable download")
+
+st.sidebar.markdown("---")
 st.sidebar.header("Project Progress")
 st.sidebar.success("Phase 1: Data Acquisition ✅")
-st.sidebar.info("Phase 2: Network Visualization 🔄")
+st.sidebar.success("Phase 2: Network Visualization ✅")
+st.sidebar.info("Phase 3: Pathway Analysis 🔄")
+
 
 # --- Main Tabs ---
 # --- Main Tabs ---
