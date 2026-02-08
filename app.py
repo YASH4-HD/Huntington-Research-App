@@ -118,23 +118,18 @@ with tab2:
 
 with tab3:
     st.header("Research Bibliography")
-    col1, col2 = st.columns(2)
+       st.write("Foundational papers used to construct this metabolic framework:")
+    
+    st.markdown("""
+    1. **Ross CA, Tabrizi SJ (2011)** - *Huntington's disease: from molecular pathogenesis to clinical treatment.* (Lancet Neurol)
+    2. **Saudou F, Humbert S (2016)** - *The Biology of Huntingtin.* (Neuron)
+    3. **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
+    4. **Cheng ML, et al. (2016)** - *Metabolic disturbances in Huntington's disease.* (J Neurol Sci)
+    5. **Reddy PH, et al. (2018)** - *Mitochondrial dysfunction and oxidative stress.* (BBA)
+    """)
+    
+    st.info("💡 These resources were used to identify the target genes and metabolic nodes analyzed in this dashboard.")
 
-    with col1:
-        with st.expander("📖 Essential HD Reading"):
-            st.markdown("""
-            *   **Ross CA, Tabrizi SJ (2011)** - *Molecular pathogenesis to clinical treatment.* (Lancet Neurol)
-            *   **Saudou F, Humbert S (2016)** - *The Biology of Huntingtin.* (Neuron)
-            *   **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
-            """)
-
-    with col2:
-        with st.expander("🌐 Databases Used"):
-            st.markdown("""
-            *   **KEGG:** Kyoto Encyclopedia of Genes and Genomes
-            *   **STRING:** Protein-Protein Interaction Networks
-            *   **GEO:** Gene Expression Omnibus (NCBI)
-            """)
 
 # --- FOOTER ---
 st.sidebar.markdown("---")
