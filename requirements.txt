@@ -4,3 +4,5 @@ bioservices
 matplotlib
 networkx
 plotly
+scipy
+numpy
