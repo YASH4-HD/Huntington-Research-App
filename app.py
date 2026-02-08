@@ -7,7 +7,14 @@ import matplotlib.pyplot as plt
 st.set_page_config(page_title="HD Research Lab", layout="wide")
 
 st.title("🧬 Huntington's Disease Molecular Analysis")
-
+st.markdown("""
+### **Disease Context: hsa05016**
+**Huntington's Disease (HD)** is a progressive neurodegenerative disorder caused by a CAG trinucleotide repeat expansion in the **HTT gene**. 
+This dashboard focuses on the **metabolic framework** of HD, specifically looking at:
+*   **Mitochondrial Dysfunction:** Impaired energy production in neurons.
+*   **Proteotoxicity:** Accumulation of mutant Huntingtin protein.
+*   **Excitotoxicity:** Overstimulation of glutamate receptors.
+""")
 @st.cache_data
 def fetch_real_hd_data():
     k = KEGG()
