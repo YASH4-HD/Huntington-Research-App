@@ -29,7 +29,9 @@ st.sidebar.success("Phase 1: Data Acquisition ✅")
 st.sidebar.info("Phase 2: Network Visualization 🔄")
 
 # --- Main Tabs ---
-tab1, tab2 = st.tabs(["Gene Data", "Interaction Network"])
+# --- Main Tabs ---
+# UPDATE LINE 32 TO THIS:
+tab1, tab2, tab3 = st.tabs(["Gene Data", "Interaction Network", "Pathway Analysis"])
 
 with tab1:
     st.subheader("Genetic Markers from KEGG")
@@ -41,12 +43,10 @@ with tab2:
     st.subheader("Protein Interaction Network (Preview)")
     st.write("This graph shows how the first 20 genes are interconnected in the HD pathway.")
     
-    # Create a simple network graph
     G = nx.Graph()
-    subset = df.head(20) # Let's start with 20 for speed
+    subset = df.head(20) 
     for i, row in subset.iterrows():
         G.add_node(row['Symbol'])
-        # Create a "star" network centered on HTT (the main gene)
         if row['Symbol'] != 'HTT':
             G.add_edge('HTT', row['Symbol'])
 
@@ -55,3 +55,26 @@ with tab2:
     nx.draw(G, pos, with_labels=True, node_color='skyblue', 
             node_size=2000, edge_color='gray', font_size=10, font_weight='bold')
     st.pyplot(fig)
+
+# --- NEW TAB 3 STARTING AT LINE 58 ---
+with tab3:
+    st.subheader("Biological Process Distribution")
+    import plotly.express as px
+    
+    # Categorize genes
+    categories = {
+        "Mitochondrial": df['Function'].str.contains('mitochondria|oxidative', case=False).sum(),
+        "Synaptic/Neural": df['Function'].str.contains('synaptic|neural|axon', case=False).sum(),
+        "Apoptosis (Cell Death)": df['Function'].str.contains('apoptosis|caspase', case=False).sum(),
+        "Transcription": df['Function'].str.contains('transcription|polymerase', case=False).sum()
+    }
+    
+    cat_df = pd.DataFrame(list(categories.items()), columns=['Process', 'Gene Count'])
+    
+    fig_pie = px.pie(cat_df, values='Gene Count', names='Process', 
+                     title="Functional Roles of HD-Associated Genes",
+                     hole=0.4, # This makes it a donut chart (looks more modern)
+                     color_discrete_sequence=px.colors.sequential.RdBu)
+    st.plotly_chart(fig_pie)
+
+    st.info("💡 **Insight:** A high concentration of genes in the 'Transcription' and 'Mitochondrial' categories suggests that Huntington's Disease primarily disrupts the cell's energy production and its ability to read genetic instructions.")
