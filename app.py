@@ -138,11 +138,11 @@ with tab1:
         st.pyplot(fig_bar)
 
 with tab2:
-    st.subheader("Advanced Functional Interactome")
+    st.subheader("🕸️ Advanced Functional Interactome")
     st.write("Clustering genes by metabolic mechanism. Nodes sized by prioritization score.")
     
+    # --- NETWORK CALCULATION ---
     G = nx.Graph()
-    # Using top 50 genes to ensure a diverse network
     subset = df.sort_values('Score', ascending=False).head(50)
     
     role_colors = {
@@ -159,30 +159,51 @@ with tab2:
         if row['Symbol'] != 'HTT':
             G.add_edge('HTT', row['Symbol'])
 
-    fig_net, ax_net = plt.subplots(figsize=(12, 8))
-    pos = nx.spring_layout(G, k=0.5, iterations=50, seed=42)
+    # --- NEW: NETWORK STATISTICS CALCULATIONS ---
+    num_nodes = G.number_of_nodes()
+    num_edges = G.number_of_edges()
+    avg_connectivity = round(sum(dict(G.degree()).values()) / num_nodes, 2)
     
-    for role, color in role_colors.items():
-        nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
-        if nodes:
-            # Scale node size by score
-            node_sizes = [G.nodes[n]['score'] * 200 for n in nodes]
-            nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
-                                   node_size=node_sizes, alpha=0.9, label=role.split(' ', 1)[1])
+    # Create two columns: one for stats, one for the graph
+    col_stats, col_graph = st.columns([1, 3])
 
-    nx.draw_networkx_edges(G, pos, alpha=0.2, edge_color='grey')
-    nx.draw_networkx_labels(G, pos, font_size=7, font_weight='bold')
-    
-    # Clean Legend
-    leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
-    # Use legend_handles or legendHandles based on matplotlib version
-    handles = getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', []))
-    for h in handles:
-        h.set_sizes([100])
-    
-    plt.axis('off')
-    plt.subplots_adjust(right=0.8)
-    st.pyplot(fig_net)
+    with col_stats:
+        st.markdown("### **Network Metrics**")
+        st.metric("Total Nodes", num_nodes)
+        st.metric("Total Edges", num_edges)
+        st.metric("Avg Connectivity", avg_connectivity)
+        
+        st.write("---")
+        st.write("**Top Hub Genes**")
+        # Get nodes with most connections
+        degrees = dict(G.degree())
+        top_hubs = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:3]
+        for hub, conn in top_hubs:
+            st.write(f"• **{hub}**: {conn} interactions")
+        
+        st.info("💡 Hub genes represent critical metabolic failure points.")
+
+    with col_graph:
+        fig_net, ax_net = plt.subplots(figsize=(10, 8))
+        pos = nx.spring_layout(G, k=0.5, iterations=50, seed=42)
+        
+        for role, color in role_colors.items():
+            nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
+            if nodes:
+                node_sizes = [G.nodes[n]['score'] * 200 for n in nodes]
+                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
+                                       node_size=node_sizes, alpha=0.9, label=role.split(' ', 1)[1])
+
+        nx.draw_networkx_edges(G, pos, alpha=0.2, edge_color='grey')
+        nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
+        
+        leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
+        handles = getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', []))
+        for h in handles: h.set_sizes([100])
+        
+        plt.axis('off')
+        st.pyplot(fig_net)
+
 
 with tab3:
     st.header("Research Bibliography")
