@@ -112,7 +112,8 @@ st.sidebar.markdown("""
         <strong>⚠️ Disclaimer</strong><br>
         This tool is intended for research hypothesis generation. 
         Network edges represent functional co-occurrence in KEGG pathways and do not necessarily indicate 
-        direct physical protein–protein interactions.
+        direct physical protein–protein interactions.<br><br>
+        <i>"Findings are intended to guide experimental prioritization rather than replace wet-lab validation."</i>
     </p>
 </div>
 """, unsafe_allow_html=True)
