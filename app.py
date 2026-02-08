@@ -84,7 +84,7 @@ with tab1:
     col_a, col_b = st.columns([2, 1])
     with col_a:
         st.subheader("Genetic Components")
-        search_query = st.text_input("🔍 Search genes or mechanisms (e.g. HTT, Autophagy):", placeholder="Type to filter...")
+        search_query = st.text_input("🔍 Search genes or mechanisms:", placeholder="Type to filter...")
     with col_b:
         st.subheader("Deep Dive")
         selected_gene = st.selectbox("External Research:", ["Select a Gene"] + list(df['Symbol'].unique()))
@@ -105,9 +105,7 @@ with tab1:
         score = 0
         if "Core" in row['Functional Role']: score += 5
         elif "Mitochondrial" in row['Functional Role']: score += 3
-        elif "Apoptosis" in row['Functional Role']: score += 2
-        elif "Synaptic" in row['Functional Role']: score += 2
-        elif "Autophagy" in row['Functional Role']: score += 2
+        else: score += 2
         return score + (len(row['Description']) % 3)
 
     df['Score'] = df.apply(calculate_score, axis=1)
@@ -122,13 +120,15 @@ with tab1:
         fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
         ax_bar.barh(top_10['Symbol'], top_10['Score'], color='#FF4B4B')
         ax_bar.invert_yaxis()
+        plt.tight_layout()
         st.pyplot(fig_bar)
 
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
+    st.write("Clustering genes by metabolic mechanism. Nodes sized by score.")
+    
     G = nx.Graph()
     subset = df.sort_values('Score', ascending=False).head(50)
-    
     role_colors = {"⭐ Core HD Gene": "#FF4B4B", "🔋 Mitochondrial Dysfunction": "#FFA500", "💀 Apoptosis": "#7D3C98", "🧠 Synaptic / Excitotoxicity": "#2E86C1", "♻️ Autophagy": "#28B463", "🧬 Pathway Component": "#D5D8DC"}
     
     for _, row in subset.iterrows():
@@ -143,51 +143,33 @@ with tab2:
 
     col_stats, col_graph = st.columns([1, 3])
     with col_stats:
+        st.markdown("### **Metrics**")
         st.metric("Total Nodes", G.number_of_nodes())
         st.metric("Avg Connectivity", round(sum(dict(G.degree()).values()) / G.number_of_nodes(), 2))
+        st.write("---")
+        st.write("**Top Hubs**")
+        for hub, conn in sorted(dict(G.degree()).items(), key=lambda x: x[1], reverse=True)[:3]:
+            st.write(f"• {hub}: {conn}")
 
-       with col_graph:
-        # 1. Increase figure size slightly to fit the legend
+    with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(12, 9))
-        
-        # 2. k=4.0 spreads the orange ball out even more
-        pos = nx.spring_layout(G, k=4.0, iterations=150, seed=42)
-        
+        pos = nx.spring_layout(G, k=4.5, iterations=150, seed=42)
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                node_sizes = [G.nodes[n]['score'] * 120 for n in nodes]
-                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
-                                       node_size=node_sizes, alpha=0.8, label=role.split(' ', 1)[1])
-
+                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=150, alpha=0.8, label=role.split(' ', 1)[1])
         nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
-        
-        # 3. font_size=4.5 is tiny but prevents overlapping names
-        nx.draw_networkx_labels(G, pos, font_size=4.5, font_weight='bold')
-        
-        # 4. FIX FOR THE MISSING LEGEND:
-        # This places the legend INSIDE the plot area but on the side
-        plt.legend(scatterpoints=1, labelspacing=1, title='Mechanisms', 
-                   loc='upper left', bbox_to_anchor=(1, 1))
-        
-        # 5. FIX FOR CUT-OFF: 
-        # This forces the plot to stay within the boundaries
-        plt.tight_layout()
+        nx.draw_networkx_labels(G, pos, font_size=5, font_weight='bold')
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
         plt.axis('off')
-        
-        # Use use_container_width to make it responsive
-        st.pyplot(fig_net, use_container_width=True)
-
+        plt.tight_layout()
+        st.pyplot(fig_net)
 
 with tab3:
-    st.subheader("📊 Statistical Enrichment Analysis (Fisher Exact Test)")
-    
-    # Enrichment Logic
-    N = 20000 # Genome background
-    n_sample = len(subset)
+    st.subheader("📊 Statistical Enrichment Analysis")
+    N, n_sample = 20000, len(subset)
     enrich_results = []
-    
-    for role, color in role_colors.items():
+    for role in role_colors.keys():
         if role == "🧬 Pathway Component": continue
         k = len(subset[subset['Functional Role'] == role])
         M = len(df[df['Functional Role'] == role])
@@ -200,18 +182,13 @@ with tab3:
     
     c_left, c_right = st.columns([1, 1])
     with c_left:
-        st.dataframe(res_df[['Mechanism', 'P-Value']].style.format({"P-Value": "{:.4e}"}))
+        st.dataframe(res_df[['Mechanism', 'P-Value']].style.format({"P-Value": "{:.4e}"}), use_container_width=True)
     with c_right:
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
-    st.markdown("""
-    1. **Ross CA, et al. (2011)** - *Huntington's disease: molecular pathogenesis to clinical treatment.*
-    2. **Saudou F, et al. (2016)** - *The Biology of Huntingtin.*
-    3. **KEGG Pathway Database** - *hsa05016.*
-    """)
+    st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
 
-# --- FOOTER ---
 st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
