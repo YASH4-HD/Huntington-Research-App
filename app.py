@@ -101,3 +101,46 @@ with tab3:
     st.plotly_chart(fig_pie)
 
     st.info("💡 **Insight:** A high concentration of genes in the 'Transcription' and 'Mitochondrial' categories suggests that Huntington's Disease primarily disrupts the cell's energy production and its ability to read genetic instructions.")
+# --- RESEARCH BIBLIOGRAPHY & RESOURCES ---
+st.markdown("---")
+st.header("📚 Research Bibliography & Resources")
+st.write("This dashboard is built upon the following scientific foundations and datasets:")
+
+# Create three tabs or expanders for the different types of resources
+col1, col2 = st.columns(2)
+
+with col1:
+    with st.expander("📖 Essential HD Reading"):
+        st.markdown("""
+        *   **Ross CA, Tabrizi SJ (2011)** - *Molecular pathogenesis to clinical treatment.* (Lancet Neurol)
+        *   **Saudou F, Humbert S (2016)** - *The Biology of Huntingtin.* (Neuron)
+        *   **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
+        *   **Lee JM, et al. (2019)** - *CAG repeat determines timing of HD onset.* (Cell)
+        """)
+
+    with st.expander("🧪 Metabolic & Mitochondrial Research"):
+        st.markdown("""
+        *   **Cheng ML, et al. (2016)** - *Metabolic disturbances in HD.* (J Neurol Sci)
+        *   **Reddy PH, et al. (2018)** - *Mitochondrial dysfunction and oxidative stress.* (BBA)
+        *   **Weydt P, et al. (2009)** - *PGC-1α modifies age at onset.* (Mol Neurodegener)
+        """)
+
+with col2:
+    with st.expander("🌐 Network Biology & Multi-Omics"):
+        st.markdown("""
+        *   **Barabási AL, et al. (2011)** - *Network medicine.* (Nat Rev Genet)
+        *   **Menche J, et al. (2015)** - *Uncovering disease-disease relationships.* (Science)
+        *   **Subramanian A, et al. (2005)** - *Gene set enrichment analysis (GSEA).* (PNAS)
+        """)
+
+    with st.expander("🗄️ Databases Used"):
+        st.markdown("""
+        *   **KEGG:** Kyoto Encyclopedia of Genes and Genomes
+        *   **STRING:** Protein-Protein Interaction Networks
+        *   **GEO:** Gene Expression Omnibus (NCBI)
+        *   **HDinHD:** Huntington's Disease Integrated Database
+        """)
+
+# --- FINAL FOOTER ---
+st.sidebar.markdown("---")
+st.sidebar.caption("Data sources: KEGG API, SciSpace Literature Review. Developed for PhD Application Portfolio.")
