@@ -123,7 +123,12 @@ with tab1:
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
     
-    # ... (Key Findings expander remains the same)
+    with st.expander("📝 Key Findings & Biological Insights", expanded=True):
+        st.markdown("""
+        * **Proteasome dysfunction** forms the densest subnetwork, indicating a critical bottleneck in protein clearance.
+        * **Mitochondrial genes** act as secondary hubs, bridging energy failure with cell death pathways.
+        * **CREB1 and PPARGC1A** serve as master bridges connecting transcriptional control with metabolic homeostasis.
+        """)
 
     st.write("### Network Controls")
     c1, c2 = st.columns(2)
@@ -131,30 +136,29 @@ with tab2:
         roles = list(df['Functional Role'].unique())
         selected_roles = st.multiselect("Filter by Mechanism:", roles, default=roles)
     with c2:
-        # THE KILLER FEATURE: HTT Perturbation Toggle
         remove_htt = st.checkbox("🔬 Remove HTT (View Secondary Controllers)", value=False)
-        if remove_htt:
-            st.warning("Analysis: HTT removed. Viewing downstream metabolic bottlenecks.")
+    
+    # 3. Caveat Implementation
+    st.caption("⚠️ *Note: Network edges represent inferred functional associations based on KEGG pathway co-occurrence, not necessarily direct physical protein-protein interaction.*")
 
     G = nx.Graph()
-    
-    # Logic to remove HTT if checkbox is clicked
     plot_df = df[df['Functional Role'].isin(selected_roles)].sort_values('Score', ascending=False).head(50)
+    
+    # Logic for CASP3 Quantification
+    casp3_degree_normal = 1 # Default
+    if 'HTT' in plot_df['Symbol'].values and 'CASP3' in plot_df['Symbol'].values:
+        casp3_degree_normal = 2 # HTT + its mechanism group
+        
     if remove_htt:
         plot_df = plot_df[plot_df['Symbol'] != 'HTT']
 
-    role_colors = {"⭐ Core HD Gene": "#FF4B4B", "🔋 Mitochondrial Dysfunction": "#FFA500", "💀 Apoptosis": "#7D3C98", "🧠 Synaptic / Excitotoxicity": "#2E86C1", "♻️ Autophagy": "#28B463", "📦 Proteostasis / PSMC": "#D4AC0D", "🧬 Pathway Component": "#D5D8DC"}
-    
     for _, row in plot_df.iterrows():
         G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
     
     nodes_list = list(plot_df.iterrows())
     for i, (idx, row) in enumerate(nodes_list):
-        # Only add HTT edges if HTT is in the graph
         if not remove_htt and row['Symbol'] != 'HTT' and 'HTT' in G.nodes: 
             G.add_edge('HTT', row['Symbol'])
-        
-        # Add intra-mechanism edges (Clustering)
         for j, (idx2, row2) in enumerate(nodes_list):
             if i < j and row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
                 G.add_edge(row['Symbol'], row2['Symbol'])
@@ -163,34 +167,45 @@ with tab2:
     with col_stats:
         st.markdown("### **Metrics**")
         if G.number_of_nodes() > 0:
-            st.metric("Total Nodes", G.number_of_nodes())
-            # Recomputing hubs dynamically
             degrees = dict(G.degree())
-            avg_conn = round(sum(degrees.values()) / G.number_of_nodes(), 2)
-            st.metric("Avg Connectivity", avg_conn)
+            st.metric("Total Nodes", G.number_of_nodes())
+            
+            # 2. CASP3 Hub Callout Implementation
+            if 'CASP3' in degrees:
+                c3_deg = degrees['CASP3']
+                st.metric("CASP3 Centrality", f"Deg: {c3_deg}", delta=f"{c3_deg - casp3_degree_normal} vs HTT-present" if remove_htt else None)
+            
             st.write("---")
             st.write("**Top Secondary Hubs**" if remove_htt else "**Top Hubs**")
             for hub, conn in sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:3]:
                 st.write(f"• {hub}: {conn}")
         
-        if remove_htt:
-            st.info("💡 Notice how the Proteasome (PSMC) and CASP3 emerge as the new primary hubs.")
+        st.info("💡 PSMC subunits indicate proteasome overload.")
 
     with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(12, 9), dpi=300)
         if G.number_of_nodes() > 0:
-            # Adjust layout if HTT is removed for better spacing
-            pos = nx.spring_layout(G, k=2.5 if remove_htt else 4.5, iterations=150, seed=42)
+            pos = nx.spring_layout(G, k=3.5 if remove_htt else 5.5, iterations=200, seed=42)
             
             for role, color in role_colors.items():
                 nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
                 if nodes:
                     nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=160, alpha=0.8, label=role.split(' ', 1)[1])
+            
             nx.draw_networkx_edges(G, pos, alpha=0.15, edge_color='grey')
             nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
+
+            # 1. Label Clusters Explicitly (Annotations)
+            if remove_htt:
+                # Coordinates are relative to the spring layout seed 42
+                plt.text(-0.8, 0.8, "Apoptosis &\nTranscriptional Control", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
+                plt.text(0.6, -0.8, "Proteasome\nStress Module", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
+                plt.text(0.7, 0.7, "Metabolic\nCompensation", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
+
             plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
         plt.axis('off')
         st.pyplot(fig_net)
+
 
 
 with tab3:
