@@ -41,7 +41,11 @@ def get_kegg_genes(pathway_id):
 
 # Load the data
 df = get_kegg_genes("hsa05016")
+CORE_HD_GENES = ["HTT", "BDNF", "CASP3", "CREB1", "TP53", "SOD1", "PPARGC1A"]
 
+df["Role"] = df["Symbol"].apply(
+    lambda x: "⭐ Core HD Gene" if x in CORE_HD_GENES else "🧬 Pathway Component"
+)
 # --- SIDEBAR RESEARCHER PROFILE ---
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=100) # DNA Icon
 st.sidebar.title("Researcher: Yashwant Nama")
@@ -50,7 +54,7 @@ st.sidebar.info("""
 **Focus:** Huntington's Disease (HD)
 """)
 
-# Download Button for CV
+# Download Button for CV    
 try:
     with open("CV_Yashwant_Nama_PhD_Application.pdf", "rb") as file:
         st.sidebar.download_button(
