@@ -146,17 +146,38 @@ with tab2:
         st.metric("Total Nodes", G.number_of_nodes())
         st.metric("Avg Connectivity", round(sum(dict(G.degree()).values()) / G.number_of_nodes(), 2))
 
-    with col_graph:
-        fig_net, ax_net = plt.subplots(figsize=(10, 8))
-        pos = nx.spring_layout(G, k=3.0, iterations=200, seed=42)
+       with col_graph:
+        # 1. Increase figure size slightly to fit the legend
+        fig_net, ax_net = plt.subplots(figsize=(12, 9))
+        
+        # 2. k=4.0 spreads the orange ball out even more
+        pos = nx.spring_layout(G, k=4.0, iterations=150, seed=42)
+        
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=120, alpha=0.7, label=role.split(' ', 1)[1])
-        nx.draw_networkx_edges(G, pos, alpha=0.1)
-        nx.draw_networkx_labels(G, pos, font_size=5, font_weight='bold', verticalalignment='bottom')
+                node_sizes = [G.nodes[n]['score'] * 120 for n in nodes]
+                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
+                                       node_size=node_sizes, alpha=0.8, label=role.split(' ', 1)[1])
+
+        nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
+        
+        # 3. font_size=4.5 is tiny but prevents overlapping names
+        nx.draw_networkx_labels(G, pos, font_size=4.5, font_weight='bold')
+        
+        # 4. FIX FOR THE MISSING LEGEND:
+        # This places the legend INSIDE the plot area but on the side
+        plt.legend(scatterpoints=1, labelspacing=1, title='Mechanisms', 
+                   loc='upper left', bbox_to_anchor=(1, 1))
+        
+        # 5. FIX FOR CUT-OFF: 
+        # This forces the plot to stay within the boundaries
+        plt.tight_layout()
         plt.axis('off')
-        st.pyplot(fig_net)
+        
+        # Use use_container_width to make it responsive
+        st.pyplot(fig_net, use_container_width=True)
+
 
 with tab3:
     st.subheader("📊 Statistical Enrichment Analysis (Fisher Exact Test)")
