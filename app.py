@@ -10,6 +10,18 @@ import io
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="HD Metabolic Framework", page_icon="🧬", layout="wide")
 
+# --- GLOBAL SETTINGS ---
+# Defining colors at the top so they are accessible by all Tabs and functions
+role_colors = {
+    "⭐ Core HD Gene": "#FF4B4B", 
+    "🔋 Mitochondrial Dysfunction": "#FFA500", 
+    "💀 Apoptosis": "#7D3C98", 
+    "🧠 Synaptic / Excitotoxicity": "#2E86C1", 
+    "♻️ Autophagy": "#28B463", 
+    "📦 Proteostasis / PSMC": "#D4AC0D", 
+    "🧬 Pathway Component": "#D5D8DC"
+}
+
 # --- DATA ACQUISITION (KEGG API) ---
 @st.cache_data
 def get_kegg_genes(pathway_id):
@@ -138,16 +150,13 @@ with tab2:
     with c2:
         remove_htt = st.checkbox("🔬 Remove HTT (View Secondary Controllers)", value=False)
     
-    # 3. Caveat Implementation
     st.caption("⚠️ *Note: Network edges represent inferred functional associations based on KEGG pathway co-occurrence, not necessarily direct physical protein-protein interaction.*")
 
     G = nx.Graph()
     plot_df = df[df['Functional Role'].isin(selected_roles)].sort_values('Score', ascending=False).head(50)
     
     # Logic for CASP3 Quantification
-    casp3_degree_normal = 1 # Default
-    if 'HTT' in plot_df['Symbol'].values and 'CASP3' in plot_df['Symbol'].values:
-        casp3_degree_normal = 2 # HTT + its mechanism group
+    casp3_degree_normal = 2 
         
     if remove_htt:
         plot_df = plot_df[plot_df['Symbol'] != 'HTT']
@@ -170,7 +179,6 @@ with tab2:
             degrees = dict(G.degree())
             st.metric("Total Nodes", G.number_of_nodes())
             
-            # 2. CASP3 Hub Callout Implementation
             if 'CASP3' in degrees:
                 c3_deg = degrees['CASP3']
                 st.metric("CASP3 Centrality", f"Deg: {c3_deg}", delta=f"{c3_deg - casp3_degree_normal} vs HTT-present" if remove_htt else None)
@@ -195,9 +203,7 @@ with tab2:
             nx.draw_networkx_edges(G, pos, alpha=0.15, edge_color='grey')
             nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
 
-            # 1. Label Clusters Explicitly (Annotations)
             if remove_htt:
-                # Coordinates are relative to the spring layout seed 42
                 plt.text(-0.8, 0.8, "Apoptosis &\nTranscriptional Control", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
                 plt.text(0.6, -0.8, "Proteasome\nStress Module", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
                 plt.text(0.7, 0.7, "Metabolic\nCompensation", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
@@ -206,8 +212,6 @@ with tab2:
         plt.axis('off')
         st.pyplot(fig_net)
 
-
-
 with tab3:
     st.subheader("📊 Mechanism-Level Enrichment Analysis")
     
@@ -215,16 +219,14 @@ with tab3:
     **Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test** with the total 
     KEGG pathway gene set as the background universe. P-values are exploratory and intended for 
     hypothesis generation. 
-    
-    *Note: Bonferroni correction is conservative and may underestimate enrichment of smaller mechanisms such as autophagy.*
     """)
 
-    # Enrichment Logic
     N = len(df)  
     n_sample = 30 
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
     
     enrich_results = []
+    # Using the global role_colors keys
     mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
     
     for role in mechanisms:
@@ -234,8 +236,7 @@ with tab3:
         enrich_results.append({"Mechanism": role, "Gene Count": k, "Raw P-Value": p_val})
     
     res_df = pd.DataFrame(enrich_results)
-    res_df['Adj. P-Value'] = res_df['Raw P-Value'] * len(mechanisms)
-    res_df['Adj. P-Value'] = res_df['Adj. P-Value'].clip(upper=1.0)
+    res_df['Adj. P-Value'] = (res_df['Raw P-Value'] * len(mechanisms)).clip(upper=1.0)
     res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
     res_df = res_df.sort_values("Adj. P-Value")
 
@@ -253,44 +254,33 @@ with tab3:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
-    # --- NEW: GREY INFO BOX FOR P=1.0 EXPLANATION ---
-    st.markdown(
-        """
+    st.markdown("""
         <div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;">
             <p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">
                 "Lack of enrichment for apoptosis/autophagy may reflect limited representation within the KEGG HD 
                 pathway rather than biological absence."
             </p>
         </div>
-        """, 
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
 
-    # --- BIOLOGICAL INTERPRETATION SECTION ---
-    # Finding count for Proteostasis dynamically
+    # Biological Interpretation
     prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Gene Count'].values[0]
     
     st.markdown("---")
-    st.markdown(
-        f"""
+    st.markdown(f"""
         <div style="background-color:#ffffff; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
             <p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p>
             <p style="color:#31333F; font-size:16px; line-height:1.6;">
                 Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> 
-                and <b>mitochondrial function</b> may yield higher systemic impact than pathway-isolated interventions. 
-                Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>, 
-                representing a major bottleneck in the HD interactome.
+                and <b>mitochondrial function</b> may yield higher systemic impact. 
+                Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>.
             </p>
         </div>
-        """, 
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
-
-
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
