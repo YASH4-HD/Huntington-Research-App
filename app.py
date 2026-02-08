@@ -191,6 +191,25 @@ with tab1:
     filtered_df = df[mask] if search_query else df
     st.dataframe(filtered_df[['Symbol', 'Functional Role', 'Lit_Score', 'Score', 'Description']].sort_values('Score', ascending=False), use_container_width=True, height=300)
 
+    # --- SCORING EXPLANATION SECTION ---
+    with st.expander("ℹ️ Understanding the Scoring System", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **📊 Lit_Score (Literature Prevalence)**
+            - **What it is:** A numerical value representing the research density for a specific gene.
+            - **How it's calculated:** High-confidence core genes (e.g., SNCA, PRKN) are assigned a baseline of **95**. Other genes are scored based on their frequency in neurological metabolic literature databases.
+            """)
+        with col2:
+            st.markdown("""
+            **🎯 Score (Total Priority Score)**
+            - **What it is:** The final rank used to prioritize targets for wet-lab validation.
+            - **How it's calculated:** This is a weighted average: 
+              - **60% Functional Weight:** Based on the gene's biological role (Core genes and Proteostasis components receive higher weights).
+              - **40% Literature Weight:** Based on the Lit_Score.
+            """)
+        st.caption("Formula: Total Score = (Biological_Role_Weight × 0.6) + (Lit_Score × 0.4)")
+
     st.markdown("---")
     st.subheader("🎯 Priority Candidates")
     top_10 = df.sort_values('Score', ascending=False).head(10)
