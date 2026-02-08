@@ -3,6 +3,8 @@ import pandas as pd
 import requests
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import fisher_exact
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="HD Metabolic Framework", page_icon="🧬", layout="wide")
@@ -70,13 +72,13 @@ except:
 st.sidebar.header("Project Progress")
 st.sidebar.success("Phase 1: Data Acquisition ✅")
 st.sidebar.success("Phase 2: Network Visualization ✅")
-st.sidebar.info("Phase 3: Target Prioritization 🔄")
+st.sidebar.success("Phase 3: Statistical Enrichment ✅")
 
 # --- MAIN CONTENT ---
 st.title("🧬 Huntington's Disease (HD) Metabolic Framework")
 st.markdown("### Disease Context: hsa05016")
 
-tab1, tab2, tab3 = st.tabs(["📊 Target Discovery", "🕸️ Interaction Network", "📚 Literature"])
+tab1, tab2, tab3 = st.tabs(["📊 Target Discovery", "🕸️ Interaction Network", "🔬 Enrichment & Lit"])
 
 with tab1:
     col_a, col_b = st.columns([2, 1])
@@ -89,7 +91,6 @@ with tab1:
         if selected_gene != "Select a Gene":
             st.markdown(f"**[View {selected_gene} on GeneCards ↗️](https://www.genecards.org/cgi-bin/carddisp.pl?gene={selected_gene})**")
 
-    # Filtering Logic
     mask = df['Symbol'].str.contains(search_query.upper(), na=False) | \
            df['Description'].str.contains(search_query, case=False, na=False) | \
            df['Functional Role'].str.contains(search_query, case=False, na=False)
@@ -97,7 +98,6 @@ with tab1:
     filtered_df = df[mask] if search_query else df
     st.dataframe(filtered_df, use_container_width=True, height=300)
 
-    # --- GENE PRIORITIZATION SCORING ---
     st.markdown("---")
     st.subheader("🎯 Therapeutic Target Prioritization")
     
@@ -116,106 +116,80 @@ with tab1:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.metric("Primary Target", top_10.iloc[0]['Symbol'])
-        st.write("Highest metabolic impact score.")
-        
-        # EXCEL FIX: Use 'utf-8-sig' to ensure emojis/symbols show correctly in CSV
         csv_data = df.to_csv(index=False).encode('utf-8-sig')
-        st.download_button(
-            label="📥 Export Analysis (CSV)",
-            data=csv_data,
-            file_name='HD_Target_Analysis.csv',
-            mime='text/csv'
-        )
-        
+        st.download_button(label="📥 Export Analysis (CSV)", data=csv_data, file_name='HD_Target_Analysis.csv', mime='text/csv')
     with c2:
         fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
-        colors = ['#FF4B4B' if i < 3 else '#ff8a8a' for i in range(len(top_10))]
-        ax_bar.barh(top_10['Symbol'], top_10['Score'], color=colors)
+        ax_bar.barh(top_10['Symbol'], top_10['Score'], color='#FF4B4B')
         ax_bar.invert_yaxis()
-        ax_bar.set_title("Top 10 Ranked Therapeutic Targets")
-        ax_bar.set_xlabel("Priority Score")
-        plt.tight_layout()
         st.pyplot(fig_bar)
 
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
-    st.write("Clustering genes by metabolic mechanism. Nodes sized by prioritization score.")
-    
-    # --- NETWORK CALCULATION ---
     G = nx.Graph()
     subset = df.sort_values('Score', ascending=False).head(50)
     
-    role_colors = {
-        "⭐ Core HD Gene": "#FF4B4B", 
-        "🔋 Mitochondrial Dysfunction": "#FFA500", 
-        "💀 Apoptosis": "#7D3C98", 
-        "🧠 Synaptic / Excitotoxicity": "#2E86C1", 
-        "♻️ Autophagy": "#28B463", 
-        "🧬 Pathway Component": "#D5D8DC"
-    }
+    role_colors = {"⭐ Core HD Gene": "#FF4B4B", "🔋 Mitochondrial Dysfunction": "#FFA500", "💀 Apoptosis": "#7D3C98", "🧠 Synaptic / Excitotoxicity": "#2E86C1", "♻️ Autophagy": "#28B463", "🧬 Pathway Component": "#D5D8DC"}
     
     for _, row in subset.iterrows():
         G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
 
     nodes_list = list(subset.iterrows())
     for i, (idx, row) in enumerate(nodes_list):
-        if row['Symbol'] != 'HTT':
-            G.add_edge('HTT', row['Symbol'])
+        if row['Symbol'] != 'HTT': G.add_edge('HTT', row['Symbol'])
         for j, (idx2, row2) in enumerate(nodes_list):
-            if i < j:
-                if row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
-                    G.add_edge(row['Symbol'], row2['Symbol'])
+            if i < j and row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
+                G.add_edge(row['Symbol'], row2['Symbol'])
 
-    num_nodes = G.number_of_nodes()
-    num_edges = G.number_of_edges()
-    degrees = dict(G.degree())
-    avg_connectivity = round(sum(degrees.values()) / num_nodes, 2)
-    
     col_stats, col_graph = st.columns([1, 3])
-
     with col_stats:
-        st.markdown("### **Network Metrics**")
-        st.metric("Total Nodes", num_nodes)
-        st.metric("Total Edges", num_edges)
-        st.metric("Avg Connectivity", avg_connectivity)
-        st.write("---")
-        st.write("**Top Hub Genes**")
-        top_hubs = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:5]
-        for hub, conn in top_hubs:
-            st.write(f"• **{hub}**: {conn} interactions")
+        st.metric("Total Nodes", G.number_of_nodes())
+        st.metric("Avg Connectivity", round(sum(dict(G.degree()).values()) / G.number_of_nodes(), 2))
 
     with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(10, 8))
-        # Increased k even more to 3.0 for maximum spacing
         pos = nx.spring_layout(G, k=3.0, iterations=200, seed=42)
-        
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                node_sizes = [G.nodes[n]['score'] * 120 for n in nodes]
-                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
-                                       node_size=node_sizes, alpha=0.7, label=role.split(' ', 1)[1])
-
-        nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
-        # Smaller font and offset to prevent overlap
+                nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=120, alpha=0.7, label=role.split(' ', 1)[1])
+        nx.draw_networkx_edges(G, pos, alpha=0.1)
         nx.draw_networkx_labels(G, pos, font_size=5, font_weight='bold', verticalalignment='bottom')
-        
-        leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
-        if hasattr(leg, 'legend_handles'):
-            for h in leg.legend_handles: h.set_sizes([100])
-        
         plt.axis('off')
         st.pyplot(fig_net)
 
 with tab3:
-    st.header("Research Bibliography")
+    st.subheader("📊 Statistical Enrichment Analysis (Fisher Exact Test)")
+    
+    # Enrichment Logic
+    N = 20000 # Genome background
+    n_sample = len(subset)
+    enrich_results = []
+    
+    for role, color in role_colors.items():
+        if role == "🧬 Pathway Component": continue
+        k = len(subset[subset['Functional Role'] == role])
+        M = len(df[df['Functional Role'] == role])
+        table = [[k, n_sample - k], [M - k, N - M - (n_sample - k)]]
+        _, p_val = fisher_exact(table, alternative='greater')
+        enrich_results.append({"Mechanism": role, "P-Value": p_val})
+    
+    res_df = pd.DataFrame(enrich_results).sort_values("P-Value")
+    res_df['-log10(p)'] = -np.log10(res_df['P-Value'].astype(float))
+    
+    c_left, c_right = st.columns([1, 1])
+    with c_left:
+        st.dataframe(res_df[['Mechanism', 'P-Value']].style.format({"P-Value": "{:.4e}"}))
+    with c_right:
+        st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
+
+    st.markdown("---")
+    st.subheader("📚 Research Bibliography")
     st.markdown("""
-    1. **Ross CA, et al. (2011)** - *Huntington's disease: molecular pathogenesis to clinical treatment.* (Lancet Neurol)
-    2. **Saudou F, et al. (2016)** - *The Biology of Huntingtin.* (Neuron)
-    3. **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
-    4. **KEGG Pathway Database** - *hsa05016: Huntington disease.*
+    1. **Ross CA, et al. (2011)** - *Huntington's disease: molecular pathogenesis to clinical treatment.*
+    2. **Saudou F, et al. (2016)** - *The Biology of Huntingtin.*
+    3. **KEGG Pathway Database** - *hsa05016.*
     """)
-    st.info("💡 Computational analysis developed for PhD Application Portfolio.")
 
 # --- FOOTER ---
 st.sidebar.markdown("---")
