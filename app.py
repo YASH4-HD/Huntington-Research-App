@@ -20,18 +20,24 @@ def get_kegg_genes(pathway_id):
             if line.startswith('GENE'):
                 is_gene_section = True
                 line = line.replace('GENE', '').strip()
-            elif line.startswith('COMPOUND') or line.startswith('REFERENCE'):
+            elif line.startswith('COMPOUND') or line.startswith('REFERENCE') or line.startswith('AUTHORS'):
                 is_gene_section = False
             
-            if is_gene_section:
-                parts = line.split('; ')
-                if len(parts) > 1:
-                    gene_info = parts[0].split('  ')
-                    gene_id = gene_info[0].strip()
-                    gene_symbol = gene_info[-1].strip()
-                    gene_desc = parts[1].strip()
-                    genes.append({'ID': gene_id, 'Symbol': gene_symbol, 'Description': gene_desc})
+            if is_gene_section and line:
+                # KEGG format is usually: ID  SYMBOL; DESCRIPTION
+                if ';' in line:
+                    parts = line.split('; ')
+                    description = parts[1].strip()
+                    # Now handle the ID and Symbol part
+                    id_symbol_part = parts[0].strip()
+                    # Split by multiple spaces to separate ID from Symbol
+                    sub_parts = id_symbol_part.split(None, 1) # Split only on the first whitespace
+                    if len(sub_parts) >= 2:
+                        gene_id = sub_parts[0].strip()
+                        gene_symbol = sub_parts[1].strip()
+                        genes.append({'ID': gene_id, 'Symbol': gene_symbol, 'Description': description})
     return pd.DataFrame(genes)
+
 
 # Load the data
 df = get_kegg_genes("hsa05016")
