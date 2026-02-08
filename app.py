@@ -91,6 +91,10 @@ st.sidebar.success("Phase 1: Data Acquisition ✅")
 st.sidebar.success("Phase 2: Network Visualization ✅")
 st.sidebar.success("Phase 3: Statistical Enrichment ✅")
 
+# Scientific Disclaimer at bottom of sidebar
+st.sidebar.markdown("---")
+st.sidebar.caption("⚠️ **Scientific Note:** Edges represent functional pathway associations, not direct physical protein-protein interactions (PPIs).")
+
 # --- MAIN CONTENT ---
 st.title("🧬 Huntington's Disease (HD) Metabolic Framework")
 st.markdown("### Disease Context: hsa05016")
@@ -134,6 +138,9 @@ with tab1:
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
     
+    # --- SAFETY BADGE ---
+    st.info("🧬 **Disclaimer:** Network edges represent inferred functional coupling based on KEGG pathway co-occurrence. These do not strictly imply physical binding.")
+
     with st.expander("📝 Key Findings & Biological Insights", expanded=True):
         st.markdown("""
         * **Proteasome dysfunction** forms the densest subnetwork, indicating a critical bottleneck in protein clearance.
@@ -149,8 +156,6 @@ with tab2:
     with c2:
         remove_htt = st.checkbox("🔬 Remove HTT (View Secondary Controllers)", value=False)
     
-    st.caption("⚠️ *Note: Network edges represent inferred functional associations based on KEGG pathway co-occurrence.*")
-
     G = nx.Graph()
     plot_df = df[df['Functional Role'].isin(selected_roles)].sort_values('Score', ascending=False).head(50)
     
@@ -197,7 +202,6 @@ with tab2:
             nx.draw_networkx_edges(G, pos, alpha=0.15, edge_color='grey')
             nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
 
-            # --- DYNAMIC CLUSTER LABELS ---
             if remove_htt:
                 def get_cluster_center(keywords):
                     coords = [pos[n] for n in G.nodes if any(k in n for k in keywords)]
@@ -211,7 +215,6 @@ with tab2:
                     plt.text(apo_center[0], apo_center[1] + 0.25, "Apoptosis &\nTranscriptional Control", 
                              fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
                 if prot_center is not None:
-                    # Pushed lower (-0.4) to clear the cluster nodes
                     plt.text(prot_center[0], prot_center[1] - 0.4, "Proteasome\nStress Module", 
                              fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
                 if meta_center is not None:
@@ -236,7 +239,13 @@ with tab3:
         k = len(full_subset[full_subset['Functional Role'] == role])
         M = len(df[df['Functional Role'] == role])
         _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
-        enrich_results.append({"Mechanism": role, "Gene Count": k, "Raw P-Value": p_val})
+        
+        # Adding Overlap Ratio for PhD-level clarity
+        enrich_results.append({
+            "Mechanism": role, 
+            "Overlap Ratio": f"{k} / {M}", 
+            "Raw P-Value": p_val
+        })
     
     res_df = pd.DataFrame(enrich_results)
     res_df['Adj. P-Value'] = (res_df['Raw P-Value'] * len(mechanisms)).clip(upper=1.0)
@@ -246,14 +255,15 @@ with tab3:
     c_left, c_right = st.columns([1, 1])
     with c_left:
         st.markdown("**Enrichment Results**")
-        st.dataframe(res_df[['Mechanism', 'Gene Count', 'Raw P-Value', 'Adj. P-Value']].style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}), use_container_width=True)
+        st.dataframe(res_df[['Mechanism', 'Overlap Ratio', 'Raw P-Value', 'Adj. P-Value']].style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}), use_container_width=True)
+        st.caption("💡 *Overlap Ratio = Genes in Top 30 / Total Genes in Pathway*")
     with c_right:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
     st.markdown("""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;"><p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">"Lack of enrichment for apoptosis/autophagy may reflect limited representation within the KEGG HD pathway rather than biological absence."</p></div>""", unsafe_allow_html=True)
 
-    prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Gene Count'].values[0]
+    prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Overlap Ratio'].values[0].split(' / ')[0]
     st.markdown("---")
     st.markdown(f"""<div style="background-color:#ffffff; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p><p style="color:#31333F; font-size:16px; line-height:1.6;">Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> and <b>mitochondrial function</b> may yield higher systemic impact. Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>.</p></div>""", unsafe_allow_html=True)
 
@@ -261,5 +271,4 @@ with tab3:
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
 
-st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
