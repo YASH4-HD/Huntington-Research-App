@@ -25,7 +25,7 @@ df = fetch_real_hd_data()
 
 # --- Sidebar ---
 # --- SIDEBAR RESEARCHER PROFILE ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3079/3079214.png", width=100)
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2491/2491314.png", width=100)
 st.sidebar.title("Researcher: Yashwant Nama")
 st.sidebar.info("""
 **Target:** PhD in Neurogenetics
