@@ -3,3 +3,4 @@ pandas
 bioservices
 matplotlib
 networkx
+plotly
