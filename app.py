@@ -154,11 +154,9 @@ with tab2:
         "🧬 Pathway Component": "#D5D8DC"
     }
     
-    # 1. Add Nodes
     for _, row in subset.iterrows():
         G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
 
-    # 2. Add Edges (Inter-category clustering)
     nodes_list = list(subset.iterrows())
     for i, (idx, row) in enumerate(nodes_list):
         if row['Symbol'] != 'HTT':
@@ -168,7 +166,6 @@ with tab2:
                 if row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
                     G.add_edge(row['Symbol'], row2['Symbol'])
 
-    # --- NETWORK STATISTICS ---
     num_nodes = G.number_of_nodes()
     num_edges = G.number_of_edges()
     degrees = dict(G.degree())
@@ -186,28 +183,26 @@ with tab2:
         top_hubs = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:5]
         for hub, conn in top_hubs:
             st.write(f"• **{hub}**: {conn} interactions")
-        st.info("💡 Hub genes represent critical metabolic failure points.")
 
     with col_graph:
-        # ALL CODE BELOW IS NOW INDENTED CORRECTLY
         fig_net, ax_net = plt.subplots(figsize=(10, 8))
-        
-        # k=1.5 spreads the "orange ball" out so it's readable
-        pos = nx.spring_layout(G, k=1.5, iterations=150, seed=42)
+        # Increased k even more to 3.0 for maximum spacing
+        pos = nx.spring_layout(G, k=3.0, iterations=200, seed=42)
         
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                node_sizes = [G.nodes[n]['score'] * 150 for n in nodes]
+                node_sizes = [G.nodes[n]['score'] * 120 for n in nodes]
                 nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
-                                       node_size=node_sizes, alpha=0.8, label=role.split(' ', 1)[1])
+                                       node_size=node_sizes, alpha=0.7, label=role.split(' ', 1)[1])
 
         nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
-        nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
+        # Smaller font and offset to prevent overlap
+        nx.draw_networkx_labels(G, pos, font_size=5, font_weight='bold', verticalalignment='bottom')
         
         leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
-        handles = getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', []))
-        for h in handles: h.set_sizes([100])
+        if hasattr(leg, 'legend_handles'):
+            for h in leg.legend_handles: h.set_sizes([100])
         
         plt.axis('off')
         st.pyplot(fig_net)
