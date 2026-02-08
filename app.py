@@ -108,7 +108,6 @@ with tab1:
     st.subheader("🎯 Therapeutic Target Prioritization")
     top_10 = df.sort_values('Score', ascending=False).head(10)
 
-    # RESTORED: Export CSV and Primary Target Layout
     c1, c2 = st.columns([1, 2])
     with c1:
         st.metric("Primary Target", top_10.iloc[0]['Symbol'])
@@ -149,7 +148,6 @@ with tab2:
             if i < j and row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
                 G.add_edge(row['Symbol'], row2['Symbol'])
 
-    # RESTORED: Metrics Layout from Image 2
     col_stats, col_graph = st.columns([1, 3])
     with col_stats:
         st.markdown("### **Metrics**")
@@ -225,14 +223,25 @@ with tab3:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
-    # Ensure this block is indented exactly like the code above
-    st.markdown("""
-    > **Interpretation:** Enrichment results suggest that therapeutic strategies targeting **proteostasis** 
-    > and **mitochondrial function** may yield higher systemic impact than pathway-isolated interventions, 
-    > as these mechanisms represent the most statistically significant bottlenecks in the HD interactome.
-    """)
+    # --- ENHANCED INTERPRETATION SECTION (Correctly Indented) ---
+    st.markdown("---")
+    st.markdown(
+        """
+        <div style="background-color:#f0f2f6; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B;">
+            <p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p>
+            <p style="color:#31333F; font-size:16px; line-height:1.6;">
+                Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> 
+                and <b>mitochondrial function</b> may yield higher systemic impact than pathway-isolated interventions, 
+                as these mechanisms represent the most statistically significant bottlenecks in the HD interactome.
+            </p>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
 
+st.sidebar.markdown("---")
+st.sidebar.caption("Data: KEGG API | System: Streamlit")
