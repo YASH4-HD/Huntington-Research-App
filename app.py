@@ -24,37 +24,47 @@ def get_kegg_genes(pathway_id):
                 is_gene_section = False
             
             if is_gene_section and line:
-                # KEGG format is usually: ID  SYMBOL; DESCRIPTION
                 if ';' in line:
                     parts = line.split('; ')
                     description = parts[1].strip()
-                    # Now handle the ID and Symbol part
                     id_symbol_part = parts[0].strip()
-                    # Split by multiple spaces to separate ID from Symbol
-                    sub_parts = id_symbol_part.split(None, 1) # Split only on the first whitespace
+                    sub_parts = id_symbol_part.split(None, 1) 
                     if len(sub_parts) >= 2:
                         gene_id = sub_parts[0].strip()
                         gene_symbol = sub_parts[1].strip()
                         genes.append({'ID': gene_id, 'Symbol': gene_symbol, 'Description': description})
     return pd.DataFrame(genes)
 
+# --- BIOLOGICAL LOGIC FUNCTION ---
+def assign_role(symbol, desc):
+    CORE_HD_GENES = ["HTT", "BDNF", "CASP3", "CREB1", "TP53", "SOD1", "PPARGC1A"]
+    desc_lower = desc.lower()
+    if symbol in CORE_HD_GENES:
+        return "⭐ Core HD Gene"
+    elif "mitochond" in desc_lower or "atp" in desc_lower:
+        return "🔋 Mitochondrial Dysfunction"
+    elif "apopt" in desc_lower or "caspase" in desc_lower:
+        return "💀 Apoptosis"
+    elif "autophagy" in desc_lower:
+        return "♻️ Autophagy"
+    elif "synap" in desc_lower or "glutamate" in desc_lower:
+        return "🧠 Synaptic / Excitotoxicity"
+    else:
+        return "🧬 Pathway Component"
 
-# Load the data
+# --- LOAD AND PROCESS DATA ---
 df = get_kegg_genes("hsa05016")
-CORE_HD_GENES = ["HTT", "BDNF", "CASP3", "CREB1", "TP53", "SOD1", "PPARGC1A"]
+if not df.empty:
+    df["Functional Role"] = df.apply(lambda row: assign_role(row["Symbol"], row["Description"]), axis=1)
 
-df["Role"] = df["Symbol"].apply(
-    lambda x: "⭐ Core HD Gene" if x in CORE_HD_GENES else "🧬 Pathway Component"
-)
 # --- SIDEBAR RESEARCHER PROFILE ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=100) # DNA Icon
+st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=100)
 st.sidebar.title("Researcher: Yashwant Nama")
 st.sidebar.info("""
 **Target:** PhD in Neurogenetics
 **Focus:** Huntington's Disease (HD)
 """)
 
-# Download Button for CV    
 try:
     with open("CV_Yashwant_Nama_PhD_Application.pdf", "rb") as file:
         st.sidebar.download_button(
@@ -87,58 +97,64 @@ By mapping gene interactions and metabolic disruptions, we can better understand
 tab1, tab2, tab3 = st.tabs(["📊 Gene Data", "🕸️ Interaction Network", "📚 Literature"])
 
 with tab1:
-    st.subheader("Genetic Components of hsa05016")
-    search_query = st.text_input("🔍 Search for a specific gene (e.g., HTT, BDNF, CASP3):")
+    st.subheader("Genetic Components & Biological Roles")
+    
+    # Gene Deep Dive Selector
+    selected_gene = st.selectbox("Select a gene for deeper analysis:", ["None"] + list(df['Symbol'].unique()))
+    if selected_gene != "None":
+        st.info(f"🧬 **External Link:** [View {selected_gene} on GeneCards](https://www.genecards.org/cgi-bin/carddisp.pl?gene={selected_gene})")
+    
+    search_query = st.text_input("🔍 Search for a gene or mechanism (e.g., HTT, Mitochondrial, Apoptosis):")
 
     if search_query:
-        filtered_df = df[df['Symbol'].str.contains(search_query.upper(), na=False)]
-        st.write(f"Showing results for: **{search_query}**")
+        # Search across Symbol, Description, and the new Role column
+        mask = (df['Symbol'].str.contains(search_query.upper(), na=False)) | \
+               (df['Description'].str.contains(search_query, case=False, na=False)) | \
+               (df['Functional Role'].str.contains(search_query, case=False, na=False))
+        filtered_df = df[mask]
         st.dataframe(filtered_df, use_container_width=True)
     else:
         st.dataframe(df, use_container_width=True)
 
 with tab2:
-    st.subheader("Protein Interaction Network (Preview)")
-    st.write("Visualizing how key genes interact with the HTT (Huntingtin) hub.")
+    st.subheader("Protein Interaction Network (Topology)")
+    st.write("Visualizing connectivity between key genes. Large nodes represent higher degree centrality.")
     
-    # Create the graph
     G = nx.Graph()
-    subset = df.head(20) # Focusing on top 20 genes for clarity
+    # Using top 25 genes for a cleaner network
+    subset = df.head(25)
     for i, row in subset.iterrows():
         G.add_node(row['Symbol'])
         if row['Symbol'] != 'HTT':
             G.add_edge('HTT', row['Symbol'])
 
-    # Plotting
     fig, ax = plt.subplots(figsize=(10, 7))
     pos = nx.spring_layout(G, seed=42)
+    # Size nodes by degree (how many connections they have)
+    node_sizes = [G.degree(n) * 800 for n in G.nodes()]
+    
     nx.draw(G, pos, with_labels=True, 
-            node_color='orange', 
-            node_size=2500, 
+            node_color='skyblue', 
+            node_size=node_sizes, 
             edge_color='gray', 
-            font_size=10, 
-            font_weight='bold')
+            font_size=9, 
+            font_weight='bold',
+            alpha=0.9)
     st.pyplot(fig)
 
 with tab3:
     st.header("Research Bibliography")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        with st.expander("📖 Essential HD Reading"):
-            st.markdown("""
-            *   **Ross CA, Tabrizi SJ (2011)** - *Molecular pathogenesis to clinical treatment.* (Lancet Neurol)
-            *   **Saudou F, Humbert S (2016)** - *The Biology of Huntingtin.* (Neuron)
-            *   **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
-            """)
-
-    with col2:
-        with st.expander("🌐 Databases Used"):
-            st.markdown("""
-            *   **KEGG:** Kyoto Encyclopedia of Genes and Genomes
-            *   **STRING:** Protein-Protein Interaction Networks
-            *   **GEO:** Gene Expression Omnibus (NCBI)
-            """)
+    st.write("Foundational papers used to construct this metabolic framework:")
+    
+    st.markdown("""
+    1. **Ross CA, Tabrizi SJ (2011)** - *Huntington's disease: from molecular pathogenesis to clinical treatment.* (Lancet Neurol)
+    2. **Saudou F, Humbert S (2016)** - *The Biology of Huntingtin.* (Neuron)
+    3. **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
+    4. **Cheng ML, et al. (2016)** - *Metabolic disturbances in Huntington's disease.* (J Neurol Sci)
+    5. **Reddy PH, et al. (2018)** - *Mitochondrial dysfunction and oxidative stress.* (BBA)
+    """)
+    
+    st.info("💡 These resources were used to identify the target genes and metabolic nodes analyzed in this dashboard.")
 
 # --- FOOTER ---
 st.sidebar.markdown("---")
