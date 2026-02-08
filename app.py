@@ -198,10 +198,19 @@ with tab3:
     mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
     
     for role in mechanisms:
+        # k: genes in top list with this role (The Count)
         k = len(full_subset[full_subset['Functional Role'] == role])
+        # M: total genes in pathway with this role
         M = len(df[df['Functional Role'] == role])
+        
         _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
-        enrich_results.append({"Mechanism": role, "Raw P-Value": p_val})
+        
+        # ADDED 'Gene Count' to the dictionary
+        enrich_results.append({
+            "Mechanism": role, 
+            "Gene Count": k, 
+            "Raw P-Value": p_val
+        })
     
     res_df = pd.DataFrame(enrich_results)
     res_df['Adj. P-Value'] = res_df['Raw P-Value'] * len(mechanisms)
@@ -212,8 +221,9 @@ with tab3:
     c_left, c_right = st.columns([1, 1])
     with c_left:
         st.markdown("**Enrichment Results**")
+        # UPDATED: Added Gene Count to display
         st.dataframe(
-            res_df[['Mechanism', 'Raw P-Value', 'Adj. P-Value']].style.format({
+            res_df[['Mechanism', 'Gene Count', 'Raw P-Value', 'Adj. P-Value']].style.format({
                 "Raw P-Value": "{:.4e}", 
                 "Adj. P-Value": "{:.4e}"
             }), 
@@ -223,16 +233,20 @@ with tab3:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
-    # --- ENHANCED INTERPRETATION SECTION (Correctly Indented) ---
+    # --- UPDATED INTERPRETATION SECTION WITH BIOLOGICAL GROUNDING ---
+    # We dynamically find the count for Proteostasis to make the sentence accurate
+    prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Gene Count'].values[0]
+    
     st.markdown("---")
     st.markdown(
-        """
+        f"""
         <div style="background-color:#f0f2f6; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B;">
             <p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p>
             <p style="color:#31333F; font-size:16px; line-height:1.6;">
                 Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> 
-                and <b>mitochondrial function</b> may yield higher systemic impact than pathway-isolated interventions, 
-                as these mechanisms represent the most statistically significant bottlenecks in the HD interactome.
+                and <b>mitochondrial function</b> may yield higher systemic impact than pathway-isolated interventions. 
+                Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>, 
+                representing a major bottleneck in the HD interactome.
             </p>
         </div>
         """, 
@@ -242,6 +256,7 @@ with tab3:
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
+
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
