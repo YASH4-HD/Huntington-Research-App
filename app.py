@@ -182,10 +182,8 @@ with tab2:
         st.image(buf, use_container_width=True)
 
 with tab3:
-    # IMPROVEMENT 2: Renaming to Mechanism-Level Enrichment Analysis
     st.subheader("📊 Mechanism-Level Enrichment Analysis")
     
-    # IMPROVEMENT 1: Added line about Bonferroni being conservative
     st.info("""
     **Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test** with the total 
     KEGG pathway gene set as the background universe. P-values are exploratory and intended for 
@@ -194,7 +192,6 @@ with tab3:
     *Note: Bonferroni correction is conservative and may underestimate enrichment of smaller mechanisms such as autophagy.*
     """)
 
-    # Enrichment Logic (Keep as is)
     N = len(df)  
     n_sample = 30 
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
@@ -209,8 +206,6 @@ with tab3:
         enrich_results.append({"Mechanism": role, "Raw P-Value": p_val})
     
     res_df = pd.DataFrame(enrich_results)
-    
-    # Apply Bonferroni
     res_df['Adj. P-Value'] = res_df['Raw P-Value'] * len(mechanisms)
     res_df['Adj. P-Value'] = res_df['Adj. P-Value'].clip(upper=1.0)
     res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
@@ -230,11 +225,14 @@ with tab3:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
+    # Ensure this block is indented exactly like the code above
+    st.markdown("""
+    > **Interpretation:** Enrichment results suggest that therapeutic strategies targeting **proteostasis** 
+    > and **mitochondrial function** may yield higher systemic impact than pathway-isolated interventions, 
+    > as these mechanisms represent the most statistically significant bottlenecks in the HD interactome.
+    """)
+
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
 
-
-
-st.sidebar.markdown("---")
-st.sidebar.caption("Data: KEGG API | System: Streamlit")
