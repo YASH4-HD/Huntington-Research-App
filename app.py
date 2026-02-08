@@ -182,38 +182,37 @@ with tab2:
         st.image(buf, use_container_width=True)
 
 with tab3:
-    st.subheader("📊 Statistical Enrichment Analysis")
+    # IMPROVEMENT 2: Renaming to Mechanism-Level Enrichment Analysis
+    st.subheader("📊 Mechanism-Level Enrichment Analysis")
     
-    # NEW: Scientific Transparency Box
+    # IMPROVEMENT 1: Added line about Bonferroni being conservative
     st.info("""
     **Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test** with the total 
     KEGG pathway gene set as the background universe. P-values are exploratory and intended for 
-    hypothesis generation. Multiple testing correction applied via Bonferroni method.
+    hypothesis generation. 
+    
+    *Note: Bonferroni correction is conservative and may underestimate enrichment of smaller mechanisms such as autophagy.*
     """)
 
-    # Enrichment Logic
-    N = len(df)  # Total genes in the pathway (Background)
-    n_sample = 30 # Focus on top 30 prioritized targets
+    # Enrichment Logic (Keep as is)
+    N = len(df)  
+    n_sample = 30 
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
     
     enrich_results = []
     mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
     
     for role in mechanisms:
-        # k: genes in top list with this role
         k = len(full_subset[full_subset['Functional Role'] == role])
-        # M: total genes in pathway with this role
         M = len(df[df['Functional Role'] == role])
-        
-        # Contingency Table: [[k, n-k], [M-k, N-M-(n-k)]]
         _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
         enrich_results.append({"Mechanism": role, "Raw P-Value": p_val})
     
     res_df = pd.DataFrame(enrich_results)
     
-    # NEW: Multiple Testing Correction (Bonferroni)
+    # Apply Bonferroni
     res_df['Adj. P-Value'] = res_df['Raw P-Value'] * len(mechanisms)
-    res_df['Adj. P-Value'] = res_df['Adj. P-Value'].clip(upper=1.0) # Cap at 1.0
+    res_df['Adj. P-Value'] = res_df['Adj. P-Value'].clip(upper=1.0)
     res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
     res_df = res_df.sort_values("Adj. P-Value")
 
@@ -234,6 +233,7 @@ with tab3:
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
+
 
 
 st.sidebar.markdown("---")
