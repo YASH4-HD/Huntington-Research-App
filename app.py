@@ -69,7 +69,7 @@ def assign_role(symbol, desc, disease_name):
 # --- SIDEBAR ---
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=80)
 st.sidebar.title("Researcher Profile")
-st.sidebar.markdown(f"**Name:** Yashwant Nama\n**Target:** PhD in Neurogenetics\n---")
+st.sidebar.markdown(f"**Name:** Yashwant Nama\n**Target:** PhD in Neurogenetics & Systems Biology\n---")
 
 try:
     with open("CV_Yashwant_Nama_PhD_Application.pdf", "rb") as file:
