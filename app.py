@@ -154,28 +154,9 @@ with tab2:
     nx.draw_networkx_edges(G, pos, width=1.0, edge_color='silver', alpha=0.4)
     nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
 
-        # 1. Create the legend and save it to a variable 'leg'
-    leg = plt.legend(
-        scatterpoints=1, 
-        loc='upper left', 
-        bbox_to_anchor=(1.02, 1), 
-        title="Functional Mechanisms",
-        fontsize='small',
-        title_fontsize='medium',
-        frameon=True
-    )
-
-    # 2. Fix: This loop shrinks the giant circles in the legend
-    for handle in leg.legendHandles:
-        handle.set_sizes([100.0])
-
+    plt.legend(scatterpoints=1, loc='upper left', bbox_to_anchor=(1, 1), title="Functional Mechanisms")
     plt.axis('off')
-    
-    # 3. Adjust the plot to make room for the legend on the right
-    plt.subplots_adjust(right=0.75) 
-    
     st.pyplot(fig)
-
     st.info("💡 **Scientific Insight:** The clustering highlights how specific metabolic failures occur in coordination.")
 
 with tab3:
@@ -195,3 +176,7 @@ with tab3:
 # --- FOOTER ---
 st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | Developed for PhD Portfolio")
+
+
+
+
