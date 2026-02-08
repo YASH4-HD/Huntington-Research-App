@@ -158,19 +158,15 @@ with tab2:
     for _, row in subset.iterrows():
         G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
 
-    # 2. Add Edges (POLISHED LOGIC)
+    # 2. Add Edges (Inter-category clustering)
     nodes_list = list(subset.iterrows())
     for i, (idx, row) in enumerate(nodes_list):
-        # Connect everything to HTT (The Primary Hub)
         if row['Symbol'] != 'HTT':
-            G.add_edge('HTT', row['Symbol'], weight=1)
-        
-        # NEW: Connect genes that share the SAME role (Inter-category edges)
+            G.add_edge('HTT', row['Symbol'])
         for j, (idx2, row2) in enumerate(nodes_list):
-            if i < j: # Avoid double counting
+            if i < j:
                 if row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
-                    # We add a lighter weight edge between genes in the same category
-                    G.add_edge(row['Symbol'], row2['Symbol'], weight=0.5)
+                    G.add_edge(row['Symbol'], row2['Symbol'])
 
     # --- NETWORK STATISTICS ---
     num_nodes = G.number_of_nodes()
@@ -185,34 +181,28 @@ with tab2:
         st.metric("Total Nodes", num_nodes)
         st.metric("Total Edges", num_edges)
         st.metric("Avg Connectivity", avg_connectivity)
-        
         st.write("---")
         st.write("**Top Hub Genes**")
         top_hubs = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:5]
         for hub, conn in top_hubs:
             st.write(f"• **{hub}**: {conn} interactions")
-        
-        st.info("💡 Notice how Hub genes now show higher connectivity due to functional clustering.")
+        st.info("💡 Hub genes represent critical metabolic failure points.")
 
-        with col_graph:
+    with col_graph:
+        # ALL CODE BELOW IS NOW INDENTED CORRECTLY
         fig_net, ax_net = plt.subplots(figsize=(10, 8))
         
-        # INCREASED k (0.8 -> 1.5) to push nodes further apart
-        # INCREASED iterations for a more stable layout
+        # k=1.5 spreads the "orange ball" out so it's readable
         pos = nx.spring_layout(G, k=1.5, iterations=150, seed=42)
         
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                # Slightly smaller node sizes to reduce overlap
                 node_sizes = [G.nodes[n]['score'] * 150 for n in nodes]
                 nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
                                        node_size=node_sizes, alpha=0.8, label=role.split(' ', 1)[1])
 
-        # Draw edges with very low alpha to keep it clean
         nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
-        
-        # Smaller font size for labels to prevent overlap
         nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
         
         leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
@@ -221,8 +211,6 @@ with tab2:
         
         plt.axis('off')
         st.pyplot(fig_net)
-
-
 
 with tab3:
     st.header("Research Bibliography")
