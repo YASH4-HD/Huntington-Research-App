@@ -91,9 +91,17 @@ st.sidebar.success("Phase 1: Data Acquisition ✅")
 st.sidebar.success("Phase 2: Network Visualization ✅")
 st.sidebar.success("Phase 3: Statistical Enrichment ✅")
 
-# Scientific Disclaimer at bottom of sidebar
 st.sidebar.markdown("---")
-st.sidebar.caption("⚠️ **Scientific Note:** Edges represent functional pathway associations, not direct physical protein-protein interactions (PPIs).")
+st.sidebar.markdown("""
+<div style="padding: 10px; border-radius: 5px; background-color: #fff3cd; border-left: 5px solid #ffc107;">
+    <p style="margin: 0; font-size: 13px; color: #856404;">
+        <strong>⚠️ Disclaimer</strong><br>
+        This tool is intended for research hypothesis generation. 
+        Network edges represent functional co-occurrence in KEGG pathways and do not necessarily indicate 
+        direct physical protein–protein interactions.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # --- MAIN CONTENT ---
 st.title("🧬 Huntington's Disease (HD) Metabolic Framework")
@@ -137,18 +145,15 @@ with tab1:
 
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
-    
-    # --- SAFETY BADGE ---
-    st.info("🧬 **Disclaimer:** Network edges represent inferred functional coupling based on KEGG pathway co-occurrence. These do not strictly imply physical binding.")
+    st.info("🧬 **Disclaimer:** Network edges represent inferred functional coupling based on KEGG pathway co-occurrence.")
 
     with st.expander("📝 Key Findings & Biological Insights", expanded=True):
         st.markdown("""
-        * **Proteasome dysfunction** forms the densest subnetwork, indicating a critical bottleneck in protein clearance.
-        * **Mitochondrial genes** act as secondary hubs, bridging energy failure with cell death pathways.
-        * **CREB1 and PPARGC1A** serve as master bridges connecting transcriptional control with metabolic homeostasis.
+        * **Proteasome dysfunction** forms the densest subnetwork.
+        * **Mitochondrial genes** act as secondary hubs.
+        * **CREB1 and PPARGC1A** serve as master bridges.
         """)
 
-    st.write("### Network Controls")
     c1, c2 = st.columns(2)
     with c1:
         roles = list(df['Functional Role'].unique())
@@ -159,7 +164,6 @@ with tab2:
     G = nx.Graph()
     plot_df = df[df['Functional Role'].isin(selected_roles)].sort_values('Score', ascending=False).head(50)
     
-    casp3_degree_normal = 2 
     if remove_htt:
         plot_df = plot_df[plot_df['Symbol'] != 'HTT']
 
@@ -180,27 +184,23 @@ with tab2:
         if G.number_of_nodes() > 0:
             degrees = dict(G.degree())
             st.metric("Total Nodes", G.number_of_nodes())
-            if 'CASP3' in degrees:
-                c3_deg = degrees['CASP3']
-                st.metric("CASP3 Centrality", f"Deg: {c3_deg}", delta=f"{c3_deg - casp3_degree_normal} vs HTT-present" if remove_htt else None)
             st.write("---")
-            st.write("**Top Secondary Hubs**" if remove_htt else "**Top Hubs**")
+            st.write("**Top Hubs**")
             for hub, conn in sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:3]:
                 st.write(f"• {hub}: {conn}")
-        st.info("💡 PSMC subunits indicate proteasome overload.")
 
     with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(12, 9), dpi=300)
         if G.number_of_nodes() > 0:
-            pos = nx.spring_layout(G, k=4.5 if remove_htt else 5.5, iterations=200, seed=42)
+            pos = nx.spring_layout(G, k=6.0, iterations=250, seed=42)
             
             for role, color in role_colors.items():
                 nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
                 if nodes:
-                    nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=160, alpha=0.8, label=role.split(' ', 1)[1])
+                    nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=160, alpha=0.8, label=role.split(' ', 1)[1], ax=ax_net)
             
-            nx.draw_networkx_edges(G, pos, alpha=0.15, edge_color='grey')
-            nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
+            nx.draw_networkx_edges(G, pos, alpha=0.15, edge_color='grey', ax=ax_net)
+            nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold', ax=ax_net)
 
             if remove_htt:
                 def get_cluster_center(keywords):
@@ -212,26 +212,26 @@ with tab2:
                 meta_center = get_cluster_center(['COX', 'ATP5', 'UQCR'])
 
                 if apo_center is not None:
-                    plt.text(apo_center[0], apo_center[1] + 0.25, "Apoptosis &\nTranscriptional Control", 
-                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
+                    ax_net.text(apo_center[0], apo_center[1] + 0.3, "Apoptosis &\nTranscriptional Control", fontsize=10, color='grey', alpha=0.8, fontweight='bold', ha='center')
                 if prot_center is not None:
-                    plt.text(prot_center[0], prot_center[1] - 0.4, "Proteasome\nStress Module", 
-                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
+                    ax_net.text(prot_center[0] + 0.4, prot_center[1] - 0.2, "Proteasome\nStress Module", fontsize=10, color='grey', alpha=0.8, fontweight='bold', ha='left')
                 if meta_center is not None:
-                    plt.text(meta_center[0], meta_center[1] + 0.25, "Metabolic\nCompensation", 
-                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
+                    ax_net.text(meta_center[0] - 0.4, meta_center[1] + 0.2, "Metabolic\nCompensation", fontsize=10, color='grey', alpha=0.8, fontweight='bold', ha='right')
 
-            plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
-        plt.axis('off')
+            ax_net.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
+        ax_net.set_axis_off()
+        plt.tight_layout()
         st.pyplot(fig_net)
 
 with tab3:
     st.subheader("📊 Mechanism-Level Enrichment Analysis")
     st.info("**Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test**.")
 
-    N = len(df)  
-    n_sample = 30 
+    # --- ENRICHMENT CALCULATION ---
+    N = len(df)                  
+    n_sample = 30                
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
+    
     enrich_results = []
     mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
     
@@ -240,7 +240,6 @@ with tab3:
         M = len(df[df['Functional Role'] == role])
         _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
         
-        # Adding Overlap Ratio for PhD-level clarity
         enrich_results.append({
             "Mechanism": role, 
             "Overlap Ratio": f"{k} / {M}", 
@@ -252,20 +251,23 @@ with tab3:
     res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
     res_df = res_df.sort_values("Adj. P-Value")
 
+    # --- DISPLAY TABLE ---
+    st.markdown("**Enrichment Results with Overlap Ratios**")
+    st.dataframe(res_df[['Mechanism', 'Overlap Ratio', 'Raw P-Value', 'Adj. P-Value']].style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}), use_container_width=True)
+    st.caption("💡 *Overlap Ratio = Genes in Top 30 / Total Genes in Pathway*")
+
+    # --- CHART & INTERPRETATION ---
+    st.markdown("---")
     c_left, c_right = st.columns([1, 1])
     with c_left:
-        st.markdown("**Enrichment Results**")
-        st.dataframe(res_df[['Mechanism', 'Overlap Ratio', 'Raw P-Value', 'Adj. P-Value']].style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}), use_container_width=True)
-        st.caption("💡 *Overlap Ratio = Genes in Top 30 / Total Genes in Pathway*")
-    with c_right:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
-
-    st.markdown("""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;"><p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">"Lack of enrichment for apoptosis/autophagy may reflect limited representation within the KEGG HD pathway rather than biological absence."</p></div>""", unsafe_allow_html=True)
-
-    prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Overlap Ratio'].values[0].split(' / ')[0]
-    st.markdown("---")
-    st.markdown(f"""<div style="background-color:#ffffff; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p><p style="color:#31333F; font-size:16px; line-height:1.6;">Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> and <b>mitochondrial function</b> may yield higher systemic impact. Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>.</p></div>""", unsafe_allow_html=True)
+    with c_right:
+        st.markdown("**Biological Interpretation**")
+        prot_row = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]
+        if not prot_row.empty:
+            count = prot_row['Overlap Ratio'].values[0].split(' / ')[0]
+            st.write(f"Discovery suggests that **Proteostasis** is a primary driver, with **{count} subunits** appearing in the high-priority target list.")
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
