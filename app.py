@@ -84,7 +84,7 @@ st.sidebar.success("Phase 3: Statistical Enrichment ✅")
 st.title("🧬 Huntington's Disease (HD) Metabolic Framework")
 st.markdown("### Disease Context: hsa05016")
 
-tab1, tab2, tab3 = st.tabs(["📊 Target Discovery", "🕸️ Interaction Network", "🔬 Enrichment & Lit"])
+tab1, tab2, tab3 = st.tabs(["📊 Target Discovery", "🕸️ Interaction Network", "🔬 Enrichment & Literature"])
 
 with tab1:
     col_a, col_b = st.columns([2, 1])
