@@ -198,7 +198,7 @@ with tab2:
             nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
 
             # --- DYNAMIC CLUSTER LABELS ---
-             if remove_htt:
+            if remove_htt:
                 def get_cluster_center(keywords):
                     coords = [pos[n] for n in G.nodes if any(k in n for k in keywords)]
                     return np.mean(coords, axis=0) if coords else None
@@ -208,19 +208,15 @@ with tab2:
                 meta_center = get_cluster_center(['COX', 'ATP5', 'UQCR'])
 
                 if apo_center is not None:
-                    # Moved slightly higher (+0.25)
                     plt.text(apo_center[0], apo_center[1] + 0.25, "Apoptosis &\nTranscriptional Control", 
-                             fontsize=10, color='grey', alpha=0.7, fontweight='bold', ha='center', va='bottom')
-                
+                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
                 if prot_center is not None:
-                    # Pushed significantly DOWN (-0.4) and LEFT (-0.2) to clear the dense PSMD cluster
-                    plt.text(prot_center[0] - 0.2, prot_center[1] - 0.4, "Proteasome\nStress Module", 
-                             fontsize=10, color='grey', alpha=0.7, fontweight='bold', ha='center', va='top')
-                
+                    # Pushed lower (-0.4) to clear the cluster nodes
+                    plt.text(prot_center[0], prot_center[1] - 0.4, "Proteasome\nStress Module", 
+                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
                 if meta_center is not None:
-                    # Pushed to the RIGHT (+0.3) to move it away from the PSMA4 center node
-                    plt.text(meta_center[0] + 0.3, meta_center[1], "Metabolic\nCompensation", 
-                             fontsize=10, color='grey', alpha=0.7, fontweight='bold', ha='left', va='center')
+                    plt.text(meta_center[0], meta_center[1] + 0.25, "Metabolic\nCompensation", 
+                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
 
             plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
         plt.axis('off')
