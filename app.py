@@ -92,7 +92,7 @@ st.sidebar.markdown("""
 <div style="padding: 10px; border-radius: 5px; background-color: #fff3cd; border-left: 5px solid #ffc107;">
     <p style="margin: 0; font-size: 13px; color: #856404;">
         <strong>⚠️ Disclaimer</strong><br>
-        This tool is intended for research hypothesis generation. Network edges represent functional co-occurrence.<br><br>
+        This tool is intended for research hypothesis generation. Network edges represent inferred functional associations derived from KEGG pathway co-occurrence and do not imply direct physical, regulatory, or causal protein-protein interactions.<br><br>
         <i>"Findings guide experimental prioritization rather than replace wet-lab validation."</i>
     </p>
 </div>
