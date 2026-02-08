@@ -154,8 +154,18 @@ with tab2:
     nx.draw_networkx_edges(G, pos, width=1.0, edge_color='silver', alpha=0.4)
     nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
 
-    plt.legend(scatterpoints=1, loc='upper left', bbox_to_anchor=(1, 1), title="Functional Mechanisms")
+    # FIX: Moved legend further right and used smaller font
+    plt.legend(
+        scatterpoints=1, 
+        loc='upper left', 
+        bbox_to_anchor=(1.02, 1), 
+        title="Functional Mechanisms",
+        fontsize='x-small',
+        title_fontsize='small'
+    )
+    
     plt.axis('off')
+    plt.tight_layout() # Ensures legend isn't cut off
     st.pyplot(fig)
     st.info("💡 **Scientific Insight:** The clustering highlights how specific metabolic failures occur in coordination.")
 
