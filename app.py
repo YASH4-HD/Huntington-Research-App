@@ -66,17 +66,71 @@ def assign_role(symbol, desc, disease_name):
     elif "psm" in symbol or "proteasome" in desc_lower: return "📦 Proteostasis / PSMC"
     else: return "🧬 Pathway Component"
 
-# --- SIDEBAR ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=80)
-st.sidebar.title("Researcher Profile")
-st.sidebar.markdown(f"**Name:** Yashwant Nama\n**Research Direction:** PhD in Neurogenetics & Systems Biology\n---")
+# --- SIDEBAR: STYLISH RESEARCHER PROFILE ---
+st.sidebar.markdown("""
+    <style>
+    .profile-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .profile-name {
+        color: #FF4B4B;
+        font-size: 20px;
+        font-weight: bold;
+        margin-top: 10px;
+        margin-bottom: 0px;
+    }
+    .profile-title {
+        color: #7d8597;
+        font-size: 14px;
+        font-style: italic;
+        margin-bottom: 15px;
+    }
+    .stat-box {
+        display: flex;
+        justify-content: space-around;
+        padding: 10px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .stat-item {
+        font-size: 11px;
+        color: #4A90E2;
+        font-weight: bold;
+    }
+    </style>
+    
+    <div class="profile-card">
+        <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png" width="80">
+        <p class="profile-name">Yashwant Nama</p>
+        <p class="profile-title">PhD Candidate | Neurogenetics & Systems Biology</p>
+        <div class="stat-box">
+            <div class="stat-item">🧬 Genomics</div>
+            <div class="stat-item">🕸️ Networks</div>
+            <div class="stat-item">🧪 Wet-Lab</div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
+# CV Download Button
 try:
     with open("CV_Yashwant_Nama_PhD_Application.pdf", "rb") as file:
-        st.sidebar.download_button(label="📄 Download My CV", data=file, file_name="Yashwant_Nama_CV.pdf", mime="application/pdf")
+        st.sidebar.download_button(
+            label="📄 Access Full Curriculum Vitae",
+            data=file,
+            file_name="Yashwant_Nama_CV.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
 except:
-    st.sidebar.warning("Note: CV PDF not found.")
+    st.sidebar.info("📂 [CV currently being updated]")
 
+# Disease Selection
 st.sidebar.header("Disease Specificity Test")
 disease_choice = st.sidebar.selectbox("Select Target Pathology:", ["Huntington's", "Alzheimer's", "Parkinson's"])
 pathway_map = {"Huntington's": "hsa05016", "Alzheimer's": "hsa05010", "Parkinson's": "hsa05012"}
@@ -92,8 +146,8 @@ st.sidebar.markdown("""
 <div style="padding: 10px; border-radius: 5px; background-color: #fff3cd; border-left: 5px solid #ffc107;">
     <p style="margin: 0; font-size: 13px; color: #856404;">
         <strong>⚠️ Disclaimer</strong><br>
-        This tool is intended for research hypothesis generation. Network edges represent inferred functional associations derived from KEGG pathway co-occurrence and do not imply direct physical, regulatory, or causal protein-protein interactions.<br><br>
-        <i>"Findings guide experimental prioritization rather than replace wet-lab validation."</i>
+        Findings guide experimental prioritization rather than replace wet-lab validation.<br><br>
+        <i>"Network edges represent inferred functional associations derived from KEGG pathway co-occurrence."</i>
     </p>
 </div>
 """, unsafe_allow_html=True)
