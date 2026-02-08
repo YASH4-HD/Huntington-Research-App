@@ -99,7 +99,6 @@ tab1, tab2, tab3 = st.tabs(["📊 Gene Data", "🕸️ Interaction Network", "�
 with tab1:
     st.subheader("Genetic Components & Biological Roles")
     
-    # Gene Deep Dive Selector
     selected_gene = st.selectbox("Select a gene for deeper analysis:", ["None"] + list(df['Symbol'].unique()))
     if selected_gene != "None":
         st.info(f"🧬 **External Link:** [View {selected_gene} on GeneCards](https://www.genecards.org/cgi-bin/carddisp.pl?gene={selected_gene})")
@@ -107,7 +106,6 @@ with tab1:
     search_query = st.text_input("🔍 Search for a gene or mechanism (e.g., HTT, Mitochondrial, Apoptosis):")
 
     if search_query:
-        # Search across Symbol, Description, and the new Role column
         mask = (df['Symbol'].str.contains(search_query.upper(), na=False)) | \
                (df['Description'].str.contains(search_query, case=False, na=False)) | \
                (df['Functional Role'].str.contains(search_query, case=False, na=False))
@@ -121,8 +119,6 @@ with tab2:
     st.write("This graph clusters genes by biological mechanism. Nodes are colored by functional pathway.")
     
     G = nx.Graph()
-    
-    # Define color scheme (Clean text for the legend to avoid [] boxes)
     role_colors = {
         "Core HD Gene": "#FF4B4B",           
         "Mitochondrial Dysfunction": "#FFA500", 
@@ -132,10 +128,8 @@ with tab2:
         "Pathway Component": "#D5D8DC"       
     }
 
-    # Process data for the graph
     subset = df.head(30)
     for i, row in subset.iterrows():
-        # Clean the role name (remove emojis for the graph legend)
         clean_role = row['Functional Role'].replace("⭐ ", "").replace("🔋 ", "").replace("💀 ", "").replace("♻️ ", "").replace("🧠 ", "").replace("🧬 ", "")
         G.add_node(row['Symbol'], role=clean_role)
         
@@ -148,8 +142,22 @@ with tab2:
                 G.add_edge(row['Symbol'], row2['Symbol'], weight=0.5)
 
     fig, ax = plt.subplots(figsize=(12, 8))
-    pos = nx.spring_layout(G
+    pos = nx.spring_layout(G, k=0.4, iterations=50, seed=42)
+    
+    for role, color in role_colors.items():
+        node_list = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
+        if node_list:
+            size = 2500 if role == "Core HD Gene" else 1000
+            nx.draw_networkx_nodes(G, pos, nodelist=node_list, node_color=color, 
+                                   node_size=size, alpha=0.9, label=role)
 
+    nx.draw_networkx_edges(G, pos, width=1.0, edge_color='silver', alpha=0.4)
+    nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
+
+    plt.legend(scatterpoints=1, loc='upper left', bbox_to_anchor=(1, 1), title="Functional Mechanisms")
+    plt.axis('off')
+    st.pyplot(fig)
+    st.info("💡 **Scientific Insight:** The clustering highlights how specific metabolic failures occur in coordination.")
 
 with tab3:
     st.header("Research Bibliography")
