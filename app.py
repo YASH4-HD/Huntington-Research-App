@@ -64,7 +64,7 @@ if not df.empty:
         return score + (len(row['Description']) % 3)
     df['Score'] = df.apply(calculate_score, axis=1)
 
-# --- SIDEBAR (RESTORED TO PREVIOUS STYLE) ---
+# --- SIDEBAR ---
 st.sidebar.image("https://cdn-icons-png.flaticon.com/512/822/822143.png", width=80)
 st.sidebar.title("Researcher Profile")
 st.sidebar.markdown(f"**Name:** Yashwant Nama\n**Target:** PhD in Neurogenetics\n**Focus:** Huntington's Disease (HD)\n---")
@@ -79,9 +79,6 @@ st.sidebar.header("Project Progress")
 st.sidebar.success("Phase 1: Data Acquisition ✅")
 st.sidebar.success("Phase 2: Network Visualization ✅")
 st.sidebar.success("Phase 3: Statistical Enrichment ✅")
-
-st.sidebar.markdown("---")
-st.sidebar.caption("Data: KEGG API | System: Streamlit")
 
 # --- MAIN CONTENT ---
 st.title("🧬 Huntington's Disease (HD) Metabolic Framework")
@@ -110,11 +107,19 @@ with tab1:
     st.markdown("---")
     st.subheader("🎯 Therapeutic Target Prioritization")
     top_10 = df.sort_values('Score', ascending=False).head(10)
-    fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
-    ax_bar.barh(top_10['Symbol'], top_10['Score'], color='#FF4B4B')
-    ax_bar.invert_yaxis()
-    plt.tight_layout()
-    st.pyplot(fig_bar)
+
+    # RESTORED: Export CSV and Primary Target Layout
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.metric("Primary Target", top_10.iloc[0]['Symbol'])
+        csv_data = df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(label="📥 Export Analysis (CSV)", data=csv_data, file_name='HD_Target_Analysis.csv', mime='text/csv')
+    with c2:
+        fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
+        ax_bar.barh(top_10['Symbol'], top_10['Score'], color='#FF4B4B')
+        ax_bar.invert_yaxis()
+        plt.tight_layout()
+        st.pyplot(fig_bar)
 
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
@@ -144,16 +149,18 @@ with tab2:
             if i < j and row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
                 G.add_edge(row['Symbol'], row2['Symbol'])
 
+    # RESTORED: Metrics Layout from Image 2
     col_stats, col_graph = st.columns([1, 3])
     with col_stats:
-        st.markdown("### **Network Metrics**")
+        st.markdown("### **Metrics**")
         if G.number_of_nodes() > 0:
+            st.metric("Total Nodes", G.number_of_nodes())
             avg_conn = round(sum(dict(G.degree()).values()) / G.number_of_nodes(), 2)
             st.metric("Avg Connectivity", avg_conn)
             st.write("---")
-            st.write("**Top Hub Genes**")
+            st.write("**Top Hubs**")
             for hub, conn in sorted(dict(G.degree()).items(), key=lambda x: x[1], reverse=True)[:3]:
-                st.write(f"• **{hub}**: {conn} links")
+                st.write(f"• {hub}: {conn}")
         st.info("💡 PSMC subunits indicate proteasome overload.")
 
     with col_graph:
@@ -197,3 +204,6 @@ with tab3:
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
+
+st.sidebar.markdown("---")
+st.sidebar.caption("Data: KEGG API | System: Streamlit")
