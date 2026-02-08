@@ -188,24 +188,22 @@ with tab2:
             st.write(f"• **{hub}**: {conn} interactions")
         st.info("💡 Hub genes represent critical metabolic failure points.")
 
-        with col_graph:
-        # These lines MUST be indented 8 spaces (2 tabs) from the left
+    with col_graph:
+        # ALL CODE BELOW IS NOW INDENTED CORRECTLY
         fig_net, ax_net = plt.subplots(figsize=(10, 8))
         
-        # k=2.5 pushes nodes further apart to prevent overlap
-        pos = nx.spring_layout(G, k=2.5, iterations=200, seed=42)
+        # k=1.5 spreads the "orange ball" out so it's readable
+        pos = nx.spring_layout(G, k=1.5, iterations=150, seed=42)
         
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                node_sizes = [G.nodes[n]['score'] * 120 for n in nodes]
+                node_sizes = [G.nodes[n]['score'] * 150 for n in nodes]
                 nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
-                                       node_size=node_sizes, alpha=0.7, label=role.split(' ', 1)[1])
+                                       node_size=node_sizes, alpha=0.8, label=role.split(' ', 1)[1])
 
         nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
-        
-        # Smaller font and vertical alignment helps readability
-        nx.draw_networkx_labels(G, pos, font_size=5, font_weight='bold', verticalalignment='bottom')
+        nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
         
         leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
         handles = getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', []))
@@ -213,7 +211,6 @@ with tab2:
         
         plt.axis('off')
         st.pyplot(fig_net)
-
 
 with tab3:
     st.header("Research Bibliography")
