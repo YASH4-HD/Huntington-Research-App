@@ -108,7 +108,7 @@ st.sidebar.markdown("""
     <div class="profile-card">
         <img src="https://cdn-icons-png.flaticon.com/512/822/822143.png" width="80">
         <p class="profile-name">Yashwant Nama</p>
-        <p class="profile-title">PhD Candidate | Neurogenetics & Systems Biology</p>
+        <p class="profile-title">Prospective PhD Researcher | Neurogenetics & Systems Biology</p>
         <div class="stat-box">
             <div class="stat-item">🧬 Genomics</div>
             <div class="stat-item">🕸️ Networks</div>
