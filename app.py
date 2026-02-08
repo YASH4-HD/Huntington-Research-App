@@ -194,22 +194,26 @@ with tab2:
         
         st.info("💡 Notice how Hub genes now show higher connectivity due to functional clustering.")
 
-    with col_graph:
+        with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(10, 8))
-        # Increased 'k' for more spread out clusters
-        pos = nx.spring_layout(G, k=0.8, iterations=100, seed=42)
+        
+        # INCREASED k (0.8 -> 1.5) to push nodes further apart
+        # INCREASED iterations for a more stable layout
+        pos = nx.spring_layout(G, k=1.5, iterations=150, seed=42)
         
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
             if nodes:
-                node_sizes = [G.nodes[n]['score'] * 200 for n in nodes]
+                # Slightly smaller node sizes to reduce overlap
+                node_sizes = [G.nodes[n]['score'] * 150 for n in nodes]
                 nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
-                                       node_size=node_sizes, alpha=0.9, label=role.split(' ', 1)[1])
+                                       node_size=node_sizes, alpha=0.8, label=role.split(' ', 1)[1])
 
-        # Draw edges with different styles
-        # HTT edges are solid, Category edges are dashed/lighter
-        nx.draw_networkx_edges(G, pos, alpha=0.2, edge_color='grey')
-        nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
+        # Draw edges with very low alpha to keep it clean
+        nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
+        
+        # Smaller font size for labels to prevent overlap
+        nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
         
         leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
         handles = getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', []))
