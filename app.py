@@ -230,11 +230,15 @@ with tab3:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
+   st.markdown("""
+    > **Interpretation:** Enrichment results suggest that therapeutic strategies targeting **proteostasis** 
+    > and **mitochondrial function** may yield higher systemic impact than pathway-isolated interventions, 
+    > as these mechanisms represent the most statistically significant bottlenecks in the HD interactome.
+    """)
+
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
-
-
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
