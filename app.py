@@ -11,7 +11,6 @@ import io
 st.set_page_config(page_title="HD Metabolic Framework", page_icon="🧬", layout="wide")
 
 # --- GLOBAL SETTINGS ---
-# Defining colors at the top so they are accessible by all Tabs and functions
 role_colors = {
     "⭐ Core HD Gene": "#FF4B4B", 
     "🔋 Mitochondrial Dysfunction": "#FFA500", 
@@ -150,14 +149,12 @@ with tab2:
     with c2:
         remove_htt = st.checkbox("🔬 Remove HTT (View Secondary Controllers)", value=False)
     
-    st.caption("⚠️ *Note: Network edges represent inferred functional associations based on KEGG pathway co-occurrence, not necessarily direct physical protein-protein interaction.*")
+    st.caption("⚠️ *Note: Network edges represent inferred functional associations based on KEGG pathway co-occurrence.*")
 
     G = nx.Graph()
     plot_df = df[df['Functional Role'].isin(selected_roles)].sort_values('Score', ascending=False).head(50)
     
-    # Logic for CASP3 Quantification
     casp3_degree_normal = 2 
-        
     if remove_htt:
         plot_df = plot_df[plot_df['Symbol'] != 'HTT']
 
@@ -178,22 +175,19 @@ with tab2:
         if G.number_of_nodes() > 0:
             degrees = dict(G.degree())
             st.metric("Total Nodes", G.number_of_nodes())
-            
             if 'CASP3' in degrees:
                 c3_deg = degrees['CASP3']
                 st.metric("CASP3 Centrality", f"Deg: {c3_deg}", delta=f"{c3_deg - casp3_degree_normal} vs HTT-present" if remove_htt else None)
-            
             st.write("---")
             st.write("**Top Secondary Hubs**" if remove_htt else "**Top Hubs**")
             for hub, conn in sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:3]:
                 st.write(f"• {hub}: {conn}")
-        
         st.info("💡 PSMC subunits indicate proteasome overload.")
 
     with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(12, 9), dpi=300)
         if G.number_of_nodes() > 0:
-            pos = nx.spring_layout(G, k=3.5 if remove_htt else 5.5, iterations=200, seed=42)
+            pos = nx.spring_layout(G, k=4.5 if remove_htt else 5.5, iterations=200, seed=42)
             
             for role, color in role_colors.items():
                 nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
@@ -203,10 +197,25 @@ with tab2:
             nx.draw_networkx_edges(G, pos, alpha=0.15, edge_color='grey')
             nx.draw_networkx_labels(G, pos, font_size=6, font_weight='bold')
 
+            # --- DYNAMIC CLUSTER LABELS ---
             if remove_htt:
-                plt.text(-0.8, 0.8, "Apoptosis &\nTranscriptional Control", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
-                plt.text(0.6, -0.8, "Proteasome\nStress Module", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
-                plt.text(0.7, 0.7, "Metabolic\nCompensation", fontsize=10, color='grey', alpha=0.7, fontweight='bold')
+                def get_cluster_center(keywords):
+                    coords = [pos[n] for n in G.nodes if any(k in n for k in keywords)]
+                    return np.mean(coords, axis=0) if coords else None
+
+                apo_center = get_cluster_center(['CASP3', 'TP53', 'BDNF', 'CREB1'])
+                prot_center = get_cluster_center(['PSMA', 'PSMC', 'PSMD'])
+                meta_center = get_cluster_center(['COX', 'ATP5', 'UQCR'])
+
+                if apo_center is not None:
+                    plt.text(apo_center[0], apo_center[1] + 0.2, "Apoptosis &\nTranscriptional Control", 
+                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
+                if prot_center is not None:
+                    plt.text(prot_center[0], prot_center[1] - 0.2, "Proteasome\nStress Module", 
+                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
+                if meta_center is not None:
+                    plt.text(meta_center[0], meta_center[1] + 0.2, "Metabolic\nCompensation", 
+                             fontsize=9, color='grey', alpha=0.8, fontweight='bold', ha='center')
 
             plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
         plt.axis('off')
@@ -214,19 +223,12 @@ with tab2:
 
 with tab3:
     st.subheader("📊 Mechanism-Level Enrichment Analysis")
-    
-    st.info("""
-    **Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test** with the total 
-    KEGG pathway gene set as the background universe. P-values are exploratory and intended for 
-    hypothesis generation. 
-    """)
+    st.info("**Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test**.")
 
     N = len(df)  
     n_sample = 30 
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
-    
     enrich_results = []
-    # Using the global role_colors keys
     mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
     
     for role in mechanisms:
@@ -243,40 +245,16 @@ with tab3:
     c_left, c_right = st.columns([1, 1])
     with c_left:
         st.markdown("**Enrichment Results**")
-        st.dataframe(
-            res_df[['Mechanism', 'Gene Count', 'Raw P-Value', 'Adj. P-Value']].style.format({
-                "Raw P-Value": "{:.4e}", 
-                "Adj. P-Value": "{:.4e}"
-            }), 
-            use_container_width=True
-        )
+        st.dataframe(res_df[['Mechanism', 'Gene Count', 'Raw P-Value', 'Adj. P-Value']].style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}), use_container_width=True)
     with c_right:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
-    st.markdown("""
-        <div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;">
-            <p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">
-                "Lack of enrichment for apoptosis/autophagy may reflect limited representation within the KEGG HD 
-                pathway rather than biological absence."
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;"><p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">"Lack of enrichment for apoptosis/autophagy may reflect limited representation within the KEGG HD pathway rather than biological absence."</p></div>""", unsafe_allow_html=True)
 
-    # Biological Interpretation
     prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Gene Count'].values[0]
-    
     st.markdown("---")
-    st.markdown(f"""
-        <div style="background-color:#ffffff; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);">
-            <p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p>
-            <p style="color:#31333F; font-size:16px; line-height:1.6;">
-                Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> 
-                and <b>mitochondrial function</b> may yield higher systemic impact. 
-                Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""<div style="background-color:#ffffff; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p><p style="color:#31333F; font-size:16px; line-height:1.6;">Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> and <b>mitochondrial function</b> may yield higher systemic impact. Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>.</p></div>""", unsafe_allow_html=True)
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
