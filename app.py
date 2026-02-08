@@ -183,27 +183,58 @@ with tab2:
 
 with tab3:
     st.subheader("📊 Statistical Enrichment Analysis")
-    N, n_sample = 20000, 50
+    
+    # NEW: Scientific Transparency Box
+    st.info("""
+    **Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test** with the total 
+    KEGG pathway gene set as the background universe. P-values are exploratory and intended for 
+    hypothesis generation. Multiple testing correction applied via Bonferroni method.
+    """)
+
+    # Enrichment Logic
+    N = len(df)  # Total genes in the pathway (Background)
+    n_sample = 30 # Focus on top 30 prioritized targets
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
     
     enrich_results = []
-    for role in [r for r in role_colors.keys() if r != "🧬 Pathway Component"]:
+    mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
+    
+    for role in mechanisms:
+        # k: genes in top list with this role
         k = len(full_subset[full_subset['Functional Role'] == role])
+        # M: total genes in pathway with this role
         M = len(df[df['Functional Role'] == role])
+        
+        # Contingency Table: [[k, n-k], [M-k, N-M-(n-k)]]
         _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
-        enrich_results.append({"Mechanism": role, "P-Value": p_val, "-log10(p)": -np.log10(p_val)})
+        enrich_results.append({"Mechanism": role, "Raw P-Value": p_val})
     
-    res_df = pd.DataFrame(enrich_results).sort_values("P-Value")
+    res_df = pd.DataFrame(enrich_results)
     
+    # NEW: Multiple Testing Correction (Bonferroni)
+    res_df['Adj. P-Value'] = res_df['Raw P-Value'] * len(mechanisms)
+    res_df['Adj. P-Value'] = res_df['Adj. P-Value'].clip(upper=1.0) # Cap at 1.0
+    res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
+    res_df = res_df.sort_values("Adj. P-Value")
+
     c_left, c_right = st.columns([1, 1])
     with c_left:
-        st.dataframe(res_df[['Mechanism', 'P-Value']].style.format({"P-Value": "{:.4e}"}), use_container_width=True)
+        st.markdown("**Enrichment Results**")
+        st.dataframe(
+            res_df[['Mechanism', 'Raw P-Value', 'Adj. P-Value']].style.format({
+                "Raw P-Value": "{:.4e}", 
+                "Adj. P-Value": "{:.4e}"
+            }), 
+            use_container_width=True
+        )
     with c_right:
+        st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
+
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
