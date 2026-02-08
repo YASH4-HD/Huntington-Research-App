@@ -87,19 +87,27 @@ with tab1:
         st.subheader("Deep Dive")
         selected_gene = st.selectbox("External Research:", ["Select a Gene"] + list(df['Symbol'].unique()))
         if selected_gene != "Select a Gene":
-            st.markdown(f"[View {selected_gene} on GeneCards ↗️](https://www.genecards.org/cgi-bin/carddisp.pl?gene={selected_gene})")
+            st.markdown(f"**[View {selected_gene} on GeneCards ↗️](https://www.genecards.org/cgi-bin/carddisp.pl?gene={selected_gene})**")
 
-    mask = df['Symbol'].str.contains(search_query.upper(), na=False) | df['Description'].str.contains(search_query, case=False, na=False) | df['Functional Role'].str.contains(search_query, case=False, na=False)
-    st.dataframe(df[mask] if search_query else df, use_container_width=True, height=300)
+    # Filtering Logic
+    mask = df['Symbol'].str.contains(search_query.upper(), na=False) | \
+           df['Description'].str.contains(search_query, case=False, na=False) | \
+           df['Functional Role'].str.contains(search_query, case=False, na=False)
+    
+    filtered_df = df[mask] if search_query else df
+    st.dataframe(filtered_df, use_container_width=True, height=300)
 
-    # Priority Scoring
+    # --- GENE PRIORITIZATION SCORING ---
     st.markdown("---")
     st.subheader("🎯 Therapeutic Target Prioritization")
+    
     def calculate_score(row):
         score = 0
         if "Core" in row['Functional Role']: score += 5
         elif "Mitochondrial" in row['Functional Role']: score += 3
         elif "Apoptosis" in row['Functional Role']: score += 2
+        elif "Synaptic" in row['Functional Role']: score += 2
+        elif "Autophagy" in row['Functional Role']: score += 2
         return score + (len(row['Description']) % 3)
 
     df['Score'] = df.apply(calculate_score, axis=1)
@@ -108,48 +116,84 @@ with tab1:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.metric("Primary Target", top_10.iloc[0]['Symbol'])
-        st.download_button("📥 Export CSV", df.to_csv(index=False), "HD_Analysis.csv")
+        st.write("Highest metabolic impact score.")
+        
+        # EXCEL FIX: Use 'utf-8-sig' to ensure emojis/symbols show correctly in CSV
+        csv_data = df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label="📥 Export Analysis (CSV)",
+            data=csv_data,
+            file_name='HD_Target_Analysis.csv',
+            mime='text/csv'
+        )
+        
     with c2:
         fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
-        ax_bar.barh(top_10['Symbol'], top_10['Score'], color=['#FF4B4B']*3 + ['#ff8a8a']*7)
+        colors = ['#FF4B4B' if i < 3 else '#ff8a8a' for i in range(len(top_10))]
+        ax_bar.barh(top_10['Symbol'], top_10['Score'], color=colors)
         ax_bar.invert_yaxis()
-        ax_bar.set_title("Top 10 Ranked Genes")
+        ax_bar.set_title("Top 10 Ranked Therapeutic Targets")
+        ax_bar.set_xlabel("Priority Score")
+        plt.tight_layout()
         st.pyplot(fig_bar)
 
 with tab2:
     st.subheader("Advanced Functional Interactome")
-    # Using more genes (top 50) to ensure legend variety
+    st.write("Clustering genes by metabolic mechanism. Nodes sized by prioritization score.")
+    
     G = nx.Graph()
+    # Using top 50 genes to ensure a diverse network
     subset = df.sort_values('Score', ascending=False).head(50)
     
-    role_colors = {"⭐ Core HD Gene": "#FF4B4B", "🔋 Mitochondrial Dysfunction": "#FFA500", "💀 Apoptosis": "#7D3C98", "🧠 Synaptic / Excitotoxicity": "#2E86C1", "♻️ Autophagy": "#28B463", "🧬 Pathway Component": "#D5D8DC"}
+    role_colors = {
+        "⭐ Core HD Gene": "#FF4B4B", 
+        "🔋 Mitochondrial Dysfunction": "#FFA500", 
+        "💀 Apoptosis": "#7D3C98", 
+        "🧠 Synaptic / Excitotoxicity": "#2E86C1", 
+        "♻️ Autophagy": "#28B463", 
+        "🧬 Pathway Component": "#D5D8DC"
+    }
     
     for _, row in subset.iterrows():
-        G.add_node(row['Symbol'], role=row['Functional Role'])
-        if row['Symbol'] != 'HTT': G.add_edge('HTT', row['Symbol'])
+        G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
+        if row['Symbol'] != 'HTT':
+            G.add_edge('HTT', row['Symbol'])
 
     fig_net, ax_net = plt.subplots(figsize=(12, 8))
-    pos = nx.spring_layout(G, k=0.5, seed=42)
+    pos = nx.spring_layout(G, k=0.5, iterations=50, seed=42)
     
     for role, color in role_colors.items():
         nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
         if nodes:
-            nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=1200 if "Core" in role else 600, label=role.split(' ', 1)[1])
+            # Scale node size by score
+            node_sizes = [G.nodes[n]['score'] * 200 for n in nodes]
+            nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
+                                   node_size=node_sizes, alpha=0.9, label=role.split(' ', 1)[1])
 
-    nx.draw_networkx_edges(G, pos, alpha=0.3)
+    nx.draw_networkx_edges(G, pos, alpha=0.2, edge_color='grey')
     nx.draw_networkx_labels(G, pos, font_size=7, font_weight='bold')
     
-    leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
-    for h in getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', [])): h.set_sizes([100])
+    # Clean Legend
+    leg = plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms", fontsize='small')
+    # Use legend_handles or legendHandles based on matplotlib version
+    handles = getattr(leg, 'legend_handles', getattr(leg, 'legendHandles', []))
+    for h in handles:
+        h.set_sizes([100])
     
     plt.axis('off')
+    plt.subplots_adjust(right=0.8)
     st.pyplot(fig_net)
 
 with tab3:
     st.header("Research Bibliography")
     st.markdown("""
-    1. **Ross CA, et al. (2011)** - *Huntington's disease: molecular pathogenesis.* (Lancet Neurol)
+    1. **Ross CA, et al. (2011)** - *Huntington's disease: molecular pathogenesis to clinical treatment.* (Lancet Neurol)
     2. **Saudou F, et al. (2016)** - *The Biology of Huntingtin.* (Neuron)
     3. **Bates GP, et al. (2015)** - *Huntington disease.* (Nat Rev Dis Primers)
+    4. **KEGG Pathway Database** - *hsa05016: Huntington disease.*
     """)
-    st.info("💡 Data source: KEGG Pathway hsa05016")
+    st.info("💡 Computational analysis developed for PhD Application Portfolio.")
+
+# --- FOOTER ---
+st.sidebar.markdown("---")
+st.sidebar.caption("Data: KEGG API | System: Streamlit")
