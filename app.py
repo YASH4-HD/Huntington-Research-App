@@ -5,6 +5,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import fisher_exact
+import io
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="HD Metabolic Framework", page_icon="🧬", layout="wide")
@@ -125,7 +126,7 @@ with tab1:
 
 with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
-    st.write("Clustering genes by metabolic mechanism. Nodes sized by score.")
+    st.info("💡 **Tip:** Hover over the graph and click the **Enlarge icon (arrows)** in the top right to zoom in and see gene names clearly.")
     
     G = nx.Graph()
     subset = df.sort_values('Score', ascending=False).head(50)
@@ -152,7 +153,8 @@ with tab2:
             st.write(f"• {hub}: {conn}")
 
     with col_graph:
-        fig_net, ax_net = plt.subplots(figsize=(12, 9))
+        # We increase DPI to 300 for crystal clear zoom
+        fig_net, ax_net = plt.subplots(figsize=(12, 9), dpi=300)
         pos = nx.spring_layout(G, k=4.5, iterations=150, seed=42)
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
@@ -163,7 +165,11 @@ with tab2:
         plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
         plt.axis('off')
         plt.tight_layout()
-        st.pyplot(fig_net)
+        
+        # This converts the plot to a high-res image that Streamlit can zoom
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", bbox_inches='tight')
+        st.image(buf, use_container_width=True)
 
 with tab3:
     st.subheader("📊 Statistical Enrichment Analysis")
