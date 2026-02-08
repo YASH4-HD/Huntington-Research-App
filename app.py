@@ -120,58 +120,35 @@ with tab2:
     st.subheader("Advanced Functional Interactome")
     st.write("This graph clusters genes by biological mechanism. Nodes are colored by functional pathway.")
     
-    # 1. Setup Graph and Colors
     G = nx.Graph()
-    color_map = []
     
-    # Define color scheme for roles
+    # Define color scheme (Clean text for the legend to avoid [] boxes)
     role_colors = {
-        "⭐ Core HD Gene": "#FF4B4B",           # Red
-        "🔋 Mitochondrial Dysfunction": "#FFA500", # Orange
-        "💀 Apoptosis": "#7D3C98",              # Purple
-        "🧠 Synaptic / Excitotoxicity": "#2E86C1", # Blue
-        "♻️ Autophagy": "#28B463",              # Green
-        "🧬 Pathway Component": "#D5D8DC"       # Grey
+        "Core HD Gene": "#FF4B4B",           
+        "Mitochondrial Dysfunction": "#FFA500", 
+        "Apoptosis": "#7D3C98",              
+        "Synaptic / Excitotoxicity": "#2E86C1", 
+        "Autophagy": "#28B463",              
+        "Pathway Component": "#D5D8DC"       
     }
 
-    # 2. Add Nodes and internal connections
+    # Process data for the graph
     subset = df.head(30)
     for i, row in subset.iterrows():
-        G.add_node(row['Symbol'], role=row['Functional Role'])
+        # Clean the role name (remove emojis for the graph legend)
+        clean_role = row['Functional Role'].replace("⭐ ", "").replace("🔋 ", "").replace("💀 ", "").replace("♻️ ", "").replace("🧠 ", "").replace("🧬 ", "")
+        G.add_node(row['Symbol'], role=clean_role)
         
-        # Connect everything to HTT (The Hub)
         if row['Symbol'] != 'HTT':
             G.add_edge('HTT', row['Symbol'], weight=1)
         
-        # EXTRAORDINARY STEP: Connect genes to EACH OTHER if they share the same role
-        # This creates the "Clusters"
         for j, row2 in subset.iterrows():
-            if i < j and row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
+            clean_role2 = row2['Functional Role'].replace("⭐ ", "").replace("🔋 ", "").replace("💀 ", "").replace("♻️ ", "").replace("🧠 ", "").replace("🧬 ", "")
+            if i < j and clean_role == clean_role2 and clean_role != "Pathway Component":
                 G.add_edge(row['Symbol'], row2['Symbol'], weight=0.5)
 
-    # 3. Create the Visualization
-    fig, ax = plt.subplots(figsize=(12, 9), facecolor='white')
-    
-    # Use Force-Directed Layout (Spring)
-    pos = nx.spring_layout(G, k=0.5, iterations=50, seed=42)
-    
-    # Draw nodes by role
-    for role, color in role_colors.items():
-        node_list = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
-        if node_list:
-            size = 3000 if "Core" in role else 1200
-            nx.draw_networkx_nodes(G, pos, nodelist=node_list, node_color=color, 
-                                   node_size=size, alpha=0.9, label=role)
-
-    # Draw edges and labels
-    nx.draw_networkx_edges(G, pos, width=1.5, edge_color='lightgrey', alpha=0.5)
-    nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold', font_family='sans-serif')
-
-    plt.legend(scatterpoints=1, loc='upper left', fontsize='small', title="Functional Mechanisms")
-    plt.axis('off')
-    st.pyplot(fig)
-    
-    st.info("💡 **Scientific Insight:** Notice how genes with similar colors cluster together. This represents 'Functional Modules' where specific metabolic failures (like Mitochondrial dysfunction) occur in coordination.")
+    fig, ax = plt.subplots(figsize=(12, 8))
+    pos = nx.spring_layout(G
 
 
 with tab3:
