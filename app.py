@@ -226,14 +226,12 @@ with tab2:
         st.pyplot(fig_net)
 
 with tab3:
-        st.subheader("📊 Mechanism-Level Enrichment Analysis")
+    st.subheader("📊 Mechanism-Level Enrichment Analysis")
     st.info("**Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test**.")
 
-    # --- ENRICHMENT CALCULATION ---
-    N = len(df)                  
-    n_sample = 30                
+    N = len(df)  
+    n_sample = 30 
     full_subset = df.sort_values('Score', ascending=False).head(n_sample)
-    
     enrich_results = []
     mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
     
@@ -242,9 +240,10 @@ with tab3:
         M = len(df[df['Functional Role'] == role])
         _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
         
+        # Adding Overlap Ratio for PhD-level clarity
         enrich_results.append({
             "Mechanism": role, 
-            "Overlap Ratio": f"{k} / {M}",
+            "Overlap Ratio": f"{k} / {M}", 
             "Raw P-Value": p_val
         })
     
@@ -253,31 +252,23 @@ with tab3:
     res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
     res_df = res_df.sort_values("Adj. P-Value")
 
-    # --- DISPLAY TABLE ---
-    st.markdown("**Enrichment Results with Gene Counts**")
-    st.dataframe(
-        res_df[['Mechanism', 'Overlap Ratio', 'Raw P-Value', 'Adj. P-Value']]
-        .style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}),
-        use_container_width=True
-    )
-    st.caption("💡 *Overlap Ratio = Genes in Top 30 / Total Genes in Pathway*")
-
-    # --- CHART & INTERPRETATION ---
-    st.markdown("---")
     c_left, c_right = st.columns([1, 1])
     with c_left:
+        st.markdown("**Enrichment Results**")
+        st.dataframe(res_df[['Mechanism', 'Overlap Ratio', 'Raw P-Value', 'Adj. P-Value']].style.format({"Raw P-Value": "{:.4e}", "Adj. P-Value": "{:.4e}"}), use_container_width=True)
+        st.caption("💡 *Overlap Ratio = Genes in Top 30 / Total Genes in Pathway*")
+    with c_right:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
-    with c_right:
-        st.markdown("**Biological Interpretation**")
-        prot_row = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]
-        if not prot_row.empty:
-            count = prot_row['Overlap Ratio'].values[0].split(' / ')[0]
-            st.write(f"Discovery suggests that **Proteostasis** is a primary driver, with **{count} subunits** appearing in the high-priority target list.")
+
+    st.markdown("""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;"><p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">"Lack of enrichment for apoptosis/autophagy may reflect limited representation within the KEGG HD pathway rather than biological absence."</p></div>""", unsafe_allow_html=True)
+
+    prot_count = res_df[res_df['Mechanism'] == "📦 Proteostasis / PSMC"]['Overlap Ratio'].values[0].split(' / ')[0]
+    st.markdown("---")
+    st.markdown(f"""<div style="background-color:#ffffff; padding:20px; border-radius:10px; border-left: 5px solid #FF4B4B; box-shadow: 2px 2px 5px rgba(0,0,0,0.05);"><p style="color:#31333F; font-size:18px; font-weight:bold; margin-bottom:5px;">🔬 Biological Interpretation</p><p style="color:#31333F; font-size:16px; line-height:1.6;">Enrichment results suggest that therapeutic strategies targeting <b>proteostasis</b> and <b>mitochondrial function</b> may yield higher systemic impact. Specifically, <b>proteostasis enrichment is driven by a dense cluster of {prot_count} proteasomal subunits</b>.</p></div>""", unsafe_allow_html=True)
 
     st.markdown("---")
     st.subheader("📚 Research Bibliography")
     st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
-
 
 st.sidebar.caption("Data: KEGG API | System: Streamlit")
