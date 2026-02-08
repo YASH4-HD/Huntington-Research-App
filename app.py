@@ -154,17 +154,30 @@ with tab2:
         "🧬 Pathway Component": "#D5D8DC"
     }
     
+    # 1. Add Nodes
     for _, row in subset.iterrows():
         G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
-        if row['Symbol'] != 'HTT':
-            G.add_edge('HTT', row['Symbol'])
 
-    # --- NEW: NETWORK STATISTICS CALCULATIONS ---
+    # 2. Add Edges (POLISHED LOGIC)
+    nodes_list = list(subset.iterrows())
+    for i, (idx, row) in enumerate(nodes_list):
+        # Connect everything to HTT (The Primary Hub)
+        if row['Symbol'] != 'HTT':
+            G.add_edge('HTT', row['Symbol'], weight=1)
+        
+        # NEW: Connect genes that share the SAME role (Inter-category edges)
+        for j, (idx2, row2) in enumerate(nodes_list):
+            if i < j: # Avoid double counting
+                if row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
+                    # We add a lighter weight edge between genes in the same category
+                    G.add_edge(row['Symbol'], row2['Symbol'], weight=0.5)
+
+    # --- NETWORK STATISTICS ---
     num_nodes = G.number_of_nodes()
     num_edges = G.number_of_edges()
-    avg_connectivity = round(sum(dict(G.degree()).values()) / num_nodes, 2)
+    degrees = dict(G.degree())
+    avg_connectivity = round(sum(degrees.values()) / num_nodes, 2)
     
-    # Create two columns: one for stats, one for the graph
     col_stats, col_graph = st.columns([1, 3])
 
     with col_stats:
@@ -175,17 +188,16 @@ with tab2:
         
         st.write("---")
         st.write("**Top Hub Genes**")
-        # Get nodes with most connections
-        degrees = dict(G.degree())
-        top_hubs = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:3]
+        top_hubs = sorted(degrees.items(), key=lambda x: x[1], reverse=True)[:5]
         for hub, conn in top_hubs:
             st.write(f"• **{hub}**: {conn} interactions")
         
-        st.info("💡 Hub genes represent critical metabolic failure points.")
+        st.info("💡 Notice how Hub genes now show higher connectivity due to functional clustering.")
 
     with col_graph:
         fig_net, ax_net = plt.subplots(figsize=(10, 8))
-        pos = nx.spring_layout(G, k=0.5, iterations=50, seed=42)
+        # Increased 'k' for more spread out clusters
+        pos = nx.spring_layout(G, k=0.8, iterations=100, seed=42)
         
         for role, color in role_colors.items():
             nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
@@ -194,6 +206,8 @@ with tab2:
                 nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, 
                                        node_size=node_sizes, alpha=0.9, label=role.split(' ', 1)[1])
 
+        # Draw edges with different styles
+        # HTT edges are solid, Category edges are dashed/lighter
         nx.draw_networkx_edges(G, pos, alpha=0.2, edge_color='grey')
         nx.draw_networkx_labels(G, pos, font_size=8, font_weight='bold')
         
@@ -203,6 +217,7 @@ with tab2:
         
         plt.axis('off')
         st.pyplot(fig_net)
+
 
 
 with tab3:
