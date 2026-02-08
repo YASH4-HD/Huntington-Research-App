@@ -95,4 +95,146 @@ with tab1:
         st.subheader("Deep Dive")
         selected_gene = st.selectbox("External Research:", ["Select a Gene"] + list(df['Symbol'].unique()))
         if selected_gene != "Select a Gene":
-            st
+            st.markdown(f"**[View {selected_gene} on GeneCards ↗️](https://www.genecards.org/cgi-bin/carddisp.pl?gene={selected_gene})**")
+
+    mask = df['Symbol'].str.contains(search_query.upper(), na=False) | \
+           df['Description'].str.contains(search_query, case=False, na=False) | \
+           df['Functional Role'].str.contains(search_query, case=False, na=False)
+    
+    filtered_df = df[mask] if search_query else df
+    st.dataframe(filtered_df, use_container_width=True, height=250)
+
+    st.markdown("---")
+    st.subheader("🎯 Therapeutic Target Prioritization")
+    top_10 = df.sort_values('Score', ascending=False).head(10)
+
+    # RESTORED: Export CSV and Primary Target Layout
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.metric("Primary Target", top_10.iloc[0]['Symbol'])
+        csv_data = df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(label="📥 Export Analysis (CSV)", data=csv_data, file_name='HD_Target_Analysis.csv', mime='text/csv')
+    with c2:
+        fig_bar, ax_bar = plt.subplots(figsize=(8, 4))
+        ax_bar.barh(top_10['Symbol'], top_10['Score'], color='#FF4B4B')
+        ax_bar.invert_yaxis()
+        plt.tight_layout()
+        st.pyplot(fig_bar)
+
+with tab2:
+    st.subheader("🕸️ Advanced Functional Interactome")
+    
+    with st.expander("📝 Key Findings & Biological Insights", expanded=True):
+        st.markdown("""
+        * **Proteasome dysfunction** forms the densest subnetwork, indicating a critical bottleneck in protein clearance.
+        * **Mitochondrial genes** act as secondary hubs, bridging energy failure with cell death pathways.
+        * **CREB1 and PPARGC1A** serve as master bridges connecting transcriptional control with metabolic homeostasis.
+        """)
+
+    st.write("### Network Controls")
+    roles = list(df['Functional Role'].unique())
+    selected_roles = st.multiselect("Filter by Mechanism:", roles, default=roles)
+    
+    G = nx.Graph()
+    subset = df[df['Functional Role'].isin(selected_roles)].sort_values('Score', ascending=False).head(50)
+    role_colors = {"⭐ Core HD Gene": "#FF4B4B", "🔋 Mitochondrial Dysfunction": "#FFA500", "💀 Apoptosis": "#7D3C98", "🧠 Synaptic / Excitotoxicity": "#2E86C1", "♻️ Autophagy": "#28B463", "📦 Proteostasis / PSMC": "#D4AC0D", "🧬 Pathway Component": "#D5D8DC"}
+    
+    for _, row in subset.iterrows():
+        G.add_node(row['Symbol'], role=row['Functional Role'], score=row['Score'])
+    
+    nodes_list = list(subset.iterrows())
+    for i, (idx, row) in enumerate(nodes_list):
+        if row['Symbol'] != 'HTT' and 'HTT' in G.nodes: G.add_edge('HTT', row['Symbol'])
+        for j, (idx2, row2) in enumerate(nodes_list):
+            if i < j and row['Functional Role'] == row2['Functional Role'] and row['Functional Role'] != "🧬 Pathway Component":
+                G.add_edge(row['Symbol'], row2['Symbol'])
+
+    # RESTORED: Metrics Layout from Image 2
+    col_stats, col_graph = st.columns([1, 3])
+    with col_stats:
+        st.markdown("### **Metrics**")
+        if G.number_of_nodes() > 0:
+            st.metric("Total Nodes", G.number_of_nodes())
+            avg_conn = round(sum(dict(G.degree()).values()) / G.number_of_nodes(), 2)
+            st.metric("Avg Connectivity", avg_conn)
+            st.write("---")
+            st.write("**Top Hubs**")
+            for hub, conn in sorted(dict(G.degree()).items(), key=lambda x: x[1], reverse=True)[:3]:
+                st.write(f"• {hub}: {conn}")
+        st.info("💡 PSMC subunits indicate proteasome overload.")
+
+    with col_graph:
+        fig_net, ax_net = plt.subplots(figsize=(12, 9), dpi=300)
+        if G.number_of_nodes() > 0:
+            pos = nx.spring_layout(G, k=4.5, iterations=150, seed=42)
+            for role, color in role_colors.items():
+                nodes = [n for n, attr in G.nodes(data=True) if attr.get('role') == role]
+                if nodes:
+                    nx.draw_networkx_nodes(G, pos, nodelist=nodes, node_color=color, node_size=160, alpha=0.8, label=role.split(' ', 1)[1])
+            nx.draw_networkx_edges(G, pos, alpha=0.1, edge_color='grey')
+            nx.draw_networkx_labels(G, pos, font_size=5, font_weight='bold')
+            plt.legend(loc='upper left', bbox_to_anchor=(1, 1), title="Mechanisms")
+        plt.axis('off')
+        plt.tight_layout()
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png", bbox_inches='tight')
+        st.image(buf, use_container_width=True)
+
+with tab3:
+    # IMPROVEMENT 2: Renaming to Mechanism-Level Enrichment Analysis
+    st.subheader("📊 Mechanism-Level Enrichment Analysis")
+    
+    # IMPROVEMENT 1: Added line about Bonferroni being conservative
+    st.info("""
+    **Methodology:** Statistical enrichment was performed using **Fisher’s Exact Test** with the total 
+    KEGG pathway gene set as the background universe. P-values are exploratory and intended for 
+    hypothesis generation. 
+    
+    *Note: Bonferroni correction is conservative and may underestimate enrichment of smaller mechanisms such as autophagy.*
+    """)
+
+    # Enrichment Logic (Keep as is)
+    N = len(df)  
+    n_sample = 30 
+    full_subset = df.sort_values('Score', ascending=False).head(n_sample)
+    
+    enrich_results = []
+    mechanisms = [r for r in role_colors.keys() if r != "🧬 Pathway Component"]
+    
+    for role in mechanisms:
+        k = len(full_subset[full_subset['Functional Role'] == role])
+        M = len(df[df['Functional Role'] == role])
+        _, p_val = fisher_exact([[k, n_sample-k], [M-k, N-M-(n_sample-k)]], alternative='greater')
+        enrich_results.append({"Mechanism": role, "Raw P-Value": p_val})
+    
+    res_df = pd.DataFrame(enrich_results)
+    
+    # Apply Bonferroni
+    res_df['Adj. P-Value'] = res_df['Raw P-Value'] * len(mechanisms)
+    res_df['Adj. P-Value'] = res_df['Adj. P-Value'].clip(upper=1.0)
+    res_df['-log10(p)'] = -np.log10(res_df['Adj. P-Value'].replace(0, 1e-10))
+    res_df = res_df.sort_values("Adj. P-Value")
+
+    c_left, c_right = st.columns([1, 1])
+    with c_left:
+        st.markdown("**Enrichment Results**")
+        st.dataframe(
+            res_df[['Mechanism', 'Raw P-Value', 'Adj. P-Value']].style.format({
+                "Raw P-Value": "{:.4e}", 
+                "Adj. P-Value": "{:.4e}"
+            }), 
+            use_container_width=True
+        )
+    with c_right:
+        st.markdown("**Significance Scale (-log10 p)**")
+        st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
+
+    st.markdown("---")
+    st.subheader("📚 Research Bibliography")
+    st.markdown("1. Ross CA, et al. (2011) | 2. Saudou F, et al. (2016) | 3. KEGG Database hsa05016")
+
+
+
+st.sidebar.markdown("---")
+st.sidebar.caption("Data: KEGG API | System: Streamlit")
