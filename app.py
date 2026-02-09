@@ -175,7 +175,7 @@ if not df.empty:
 st.title(f"🧬 {disease_choice} Metabolic Framework")
 
 # 1. ADDED DISCLAIMER LINE AT THE VERY TOP
-st.markdown(f"*This resource list supports hypothesis generation and computational exploration of {disease_choice} metabolic mechanisms.*")
+st.markdown(f"*This resource guide serves as a foundational reference for computational hypothesis generation, validation, and extension of the {disease_choice} metabolic framework.*")
 
 tab1, tab2, tab3 = st.tabs(["📊 Target Discovery", "🕸️ Interaction Network", "🔬 Enrichment & Manuscript"])
 
