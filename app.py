@@ -51,10 +51,21 @@ def get_kegg_genes(pathway_id):
 
 # --- BIOLOGICAL LOGIC FUNCTION ---
 def assign_role(symbol, desc, disease_name):
+    # Expanded Core Dictionary for all 13 Diseases
     core_dict = {
         "Huntington's": ["HTT", "BDNF", "CASP3", "CREB1", "TP53", "SOD1", "PPARGC1A"],
         "Alzheimer's": ["APP", "MAPT", "APOE", "PSEN1", "PSEN2", "BACE1"],
-        "Parkinson's": ["SNCA", "PRKN", "PINK1", "LRRK2", "PARK7"]
+        "Parkinson's": ["SNCA", "PRKN", "PINK1", "LRRK2", "PARK7"],
+        "ALS": ["SOD1", "TARDBP", "FUS", "C9orf72", "OPTN"],
+        "Prion Disease": ["PRNP", "TNP1", "STIP1"],
+        "Spinocerebellar Ataxia": ["ATXN1", "ATXN2", "ATXN3", "CACNA1A"],
+        "Spinal Muscular Atrophy": ["SMN1", "SMN2", "VAPB"],
+        "Autism Spectrum Disorder": ["SHANK3", "NLGN3", "NRXN1", "PTEN"],
+        "Schizophrenia": ["DRD2", "DISC1", "COMT", "GRIN2A"],
+        "Bipolar Disorder": ["ANK3", "CACNA1C", "CLOCK"],
+        "Depression": ["SLC6A4", "BDNF", "HTR1A", "MAOA"],
+        "Type II Diabetes": ["INS", "INSR", "IRS1", "SLC2A4"],
+        "Insulin Resistance": ["IRS1", "PIK3CA", "AKT1"]
     }
     CORE_GENES = core_dict.get(disease_name, [])
     desc_lower = desc.lower()
@@ -130,10 +141,24 @@ try:
 except:
     st.sidebar.info("📂 [CV currently being updated]")
 
-# Disease Selection
+# Disease Selection (Updated to 13 Diseases)
 st.sidebar.header("Disease Specificity Test")
-disease_choice = st.sidebar.selectbox("Select Target Pathology:", ["Huntington's", "Alzheimer's", "Parkinson's"])
-pathway_map = {"Huntington's": "hsa05016", "Alzheimer's": "hsa05010", "Parkinson's": "hsa05012"}
+pathway_map = {
+    "Huntington's": "hsa05016", 
+    "Alzheimer's": "hsa05010", 
+    "Parkinson's": "hsa05012",
+    "ALS": "hsa05014",
+    "Prion Disease": "hsa05017",
+    "Spinocerebellar Ataxia": "hsa05020",
+    "Spinal Muscular Atrophy": "hsa05022",
+    "Autism Spectrum Disorder": "hsa05021",
+    "Schizophrenia": "hsa05030",
+    "Bipolar Disorder": "hsa05031",
+    "Depression": "hsa05033",
+    "Type II Diabetes": "hsa04930",
+    "Insulin Resistance": "hsa04931"
+}
+disease_choice = st.sidebar.selectbox("Select Target Pathology:", list(pathway_map.keys()))
 pathway_id = pathway_map[disease_choice]
 
 st.sidebar.header("Project Progress")
@@ -158,7 +183,7 @@ if not df.empty:
     df["Functional Role"] = df.apply(lambda row: assign_role(row["Symbol"], row["Description"], disease_choice), axis=1)
     
     def calculate_validation(symbol):
-        high_lit = ["HTT", "BDNF", "APP", "MAPT", "SNCA", "PRKN", "CASP3", "TP53"]
+        high_lit = ["HTT", "BDNF", "APP", "MAPT", "SNCA", "PRKN", "SOD1", "INS", "BDNF", "CASP3", "TP53"]
         if symbol in high_lit: return 95
         np.random.seed(sum(ord(c) for c in symbol))
         return np.random.randint(20, 60)
@@ -174,8 +199,7 @@ if not df.empty:
 # --- MAIN CONTENT ---
 st.title(f"🧬 {disease_choice} Metabolic Framework")
 
-# 1. ADDED DISCLAIMER LINE AT THE VERY TOP
-st.markdown(f"*This resource guide serves as a foundational reference for computational hypothesis generation, validation, and extension of the {disease_choice} metabolic mechanisms.*")
+st.markdown(f"*This resource guide serves as a foundational reference for computational hypothesis generation, validation, and extension of the {disease_choice} metabolic framework.*")
 
 tab1, tab2, tab3 = st.tabs(["📊 Target Discovery", "🕸️ Interaction Network", "🔬 Enrichment & Manuscript"])
 
@@ -194,22 +218,19 @@ with tab1:
     filtered_df = df[mask] if search_query else df
     st.dataframe(filtered_df[['Symbol', 'Functional Role', 'Lit_Score', 'Score', 'Description']].sort_values('Score', ascending=False), use_container_width=True, height=300)
 
-    # --- SCORING EXPLANATION SECTION ---
     with st.expander("ℹ️ Understanding the Scoring System", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("""
             **📊 Lit_Score (Literature Prevalence)**
             - **What it is:** A numerical value representing the research density for a specific gene.
-            - **How it's calculated:** High-confidence core genes (e.g., SNCA, PRKN) are assigned a baseline of **95**. Other genes are scored based on their frequency in neurological metabolic literature databases.
+            - **How it's calculated:** High-confidence core genes are assigned a baseline of **95**.
             """)
         with col2:
             st.markdown("""
             **🎯 Score (Total Priority Score)**
-            - **What it is:** The final rank used to prioritize targets for wet-lab validation.
-            - **How it's calculated:** This is a weighted average: 
-              - **60% Functional Weight:** Based on the gene's biological role (Core genes and Proteostasis components receive higher weights).
-              - **40% Literature Weight:** Based on the Lit_Score.
+            - **What it is:** The final rank used to prioritize targets.
+            - **How it's calculated:** Weighted average: 60% Functional Role + 40% Literature Score.
             """)
         st.caption("Formula: Total Score = (Biological_Role_Weight × 0.6) + (Lit_Score × 0.4)")
 
@@ -317,7 +338,6 @@ with tab3:
 
     st.markdown(f"""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;"><p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">"Statistical enrichment validates that {disease_choice} pathology is heavily driven by metabolic clusters identified in this framework."</p></div>""", unsafe_allow_html=True)
 
-    # --- UPDATED MANUSCRIPT SECTION ---
     st.markdown("---")
     st.subheader("📄 Automated Manuscript Generation")
     
@@ -362,11 +382,9 @@ This resource guide serves as a foundational reference for computational hypothe
 --------------------------------------------------
 END OF REPORT
 """
-        # Display the summary in a nice box
         st.markdown("### Preview")
         st.info(manuscript_text)
 
-        # Add the Download Button
         st.download_button(
             label="📥 Download Summary as .txt",
             data=manuscript_text,
