@@ -252,11 +252,15 @@ with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
     st.info("🧬 **Disclaimer:** Network edges represent inferred functional coupling based on KEGG pathway co-occurrence.")
 
+    # --- DYNAMIC KEY FINDINGS ---
+    # We find the top mechanism from the enrichment analysis to display here
+    top_mechanism = res_df.iloc[0]['Mechanism'] if not res_df.empty else "Metabolic"
+    
     with st.expander("📝 Key Findings & Biological Insights", expanded=True):
         st.markdown(f"""
-        * **Proteasome dysfunction** forms the densest subnetwork in {disease_choice}.
+        * **{top_mechanism}** forms the densest subnetwork in {disease_choice}.
         * **Mitochondrial genes** act as secondary hubs, bridging energy failure.
-        * **Transcriptional regulators** serve as master bridges.
+        * **Transcriptional regulators** serve as master bridges in this pathology.
         """)
 
     c1, c2 = st.columns(2)
