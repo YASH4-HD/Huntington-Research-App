@@ -252,12 +252,19 @@ with tab2:
     st.subheader("🕸️ Advanced Functional Interactome")
     st.info("🧬 **Disclaimer:** Network edges represent inferred functional coupling based on KEGG pathway co-occurrence.")
 
+    # --- DYNAMIC KEY FINDINGS LOGIC ---
+    # Find the mechanism with the most genes (densest)
+    densest_mech = df['Functional Role'].value_counts().idxmax().replace("🧬 ", "").replace("📦 ", "")
+    # Find the top hub gene
+    top_hub = df.sort_values('Score', ascending=False).iloc[0]['Symbol']
+    
     with st.expander("📝 Key Findings & Biological Insights", expanded=True):
         st.markdown(f"""
-        * **Proteasome dysfunction** forms the densest subnetwork in {disease_choice}.
-        * **Mitochondrial genes** act as secondary hubs, bridging energy failure.
-        * **Transcriptional regulators** serve as master bridges.
+        * **{densest_mech}** forms the densest functional subnetwork in this {disease_choice} model.
+        * **{top_hub}** acts as a primary hub, potentially bridging systemic failure.
+        * **Transcriptional regulators** and pathway components serve as master bridges between clusters.
         """)
+    # ... (rest of your network plotting code remains the same)
 
     c1, c2 = st.columns(2)
     with c1:
@@ -330,11 +337,30 @@ with tab3:
     with c_left:
         st.markdown("**Significance Scale (-log10 p)**")
         st.bar_chart(data=res_df, x="Mechanism", y="-log10(p)")
-    with c_right:
+   with c_right:
         st.markdown("**Biological Interpretation**")
-        prot_row = res_df[res_df['Mechanism'].str.contains("Proteostasis")]
-        count = prot_row['Overlap Ratio'].values[0].split(' / ')[0] if not prot_row.empty else "0"
-        st.write(f"Discovery suggests that **Proteostasis** is a primary driver in {disease_choice}, with **{count} subunits** appearing in the high-priority list.")
+        
+        # --- DYNAMIC INTERPRETATION LOGIC ---
+        if not res_df.empty:
+            # Get the top enriched mechanism (lowest p-value)
+            top_enriched = res_df.iloc[0]
+            mech_name = top_enriched['Mechanism'].split(' ', 1)[-1] # Remove emoji
+            overlap = top_enriched['Overlap Ratio'].split(' / ')[0]
+            
+            st.write(f"Discovery suggests that **{mech_name}** is the primary driver in {disease_choice} pathology within this framework, with **{overlap} high-priority subunits** identified in the top clusters.")
+            
+            if top_enriched['Adj. P-Value'] < 0.05:
+                st.success(f"Statistical significance (p < 0.05) strongly validates the role of {mech_name}.")
+            else:
+                st.warning("Trend observed, but mechanism did not reach formal adjusted significance.")
+        else:
+            st.write("Insufficient data for biological interpretation.")
+
+    # Dynamic Footer Quote
+    st.markdown(f"""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;">
+        <p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">
+        "Statistical enrichment validates that {disease_choice} pathology is heavily driven by <b>{res_df.iloc[0]['Mechanism'] if not res_df.empty else 'metabolic'}</b> clusters identified in this framework."
+        </p></div>""", unsafe_allow_html=True)
 
     st.markdown(f"""<div style="background-color:#F0F2F6; padding:15px; border-radius:10px; border: 1px solid #d1d3d8;"><p style="color:#555e6d; font-style: italic; font-size:14px; margin:0;">"Statistical enrichment validates that {disease_choice} pathology is heavily driven by metabolic clusters identified in this framework."</p></div>""", unsafe_allow_html=True)
 
